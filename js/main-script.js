@@ -14,7 +14,9 @@ let geometry, material, mesh;
 let ball;
 
 let key6Pressed = false;
+let key6Holded = false;
 let keyEPressed = false;
+let keyEHolded = false;
 
 //key pressed
 //6 for exemple
@@ -155,6 +157,87 @@ function createTable(x, y, z) {
     table.position.z = z;
 }
 
+function addFace(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(2, 2, 2);
+    let mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addEye(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(0.5, 0.5, 0.5);
+    let mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addAntenna(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(1, 3, 1);
+    let mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addHead(obj, x, y, z) {
+    let head = new THREE.Object3D();
+    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+
+    addFace(head, 0, 2, 0);
+    addEye(head, 1, 3, 1.4);
+    addEye(head, -1, 3, 1.4);
+    addAntenna(head, 2, 3.5, 0);
+    addAntenna(head, -2, 3.5, 0);
+
+    obj.add(head);
+
+    head.position.x = x;
+    head.position.y = y;
+    head.position.z = z;
+}
+
+function createRobot(x, y, z) {
+    'use strict';
+
+    let robot = new THREE.Object3D();
+
+    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+
+    addHead();
+    addAbdomen();
+    //-->addCintura();
+    //---->addWheel();
+    //---->addLeg();
+    //------->addFoot();
+    addArm();
+
+    scene.add(robot);
+
+    robot.position.x = x;
+    robot.position.y = y;
+    robot.position.z = z;
+}
+
+function createTrailer(x, y, z) {
+    'use strict';
+
+    let trailer = new THREE.Object3D();
+
+    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+
+    
+    //addContainer();
+    //addWheel();
+
+    scene.add(trailer);
+
+    trailer.position.x = x;
+    trailer.position.y = y;
+    trailer.position.z = z;
+}
+
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
@@ -177,19 +260,16 @@ function handleCollisions(){
 function update(){
     'use strict';
 
-    if (keyEPressed) { //e
+    if (keyEPressed && !keyEHolded) { //e
+        keyEHolded = true;
         scene.traverse(function (node) {
             if (node instanceof THREE.AxesHelper) {
                 node.visible = !node.visible;
             }
         });
     }
-    /*
-    if (cameraInputs.includes(e.keyCode)) { // teclas 1 a 5
-        activeCamera = cameras[e.keyCode-keyCodeOffset].cam;
-    }
-    */
-    if (key6Pressed) { //tecla 6
+    if (key6Pressed && !key6Holded) { //tecla 6
+        key6Holded = true;
         scene.traverse(function (node) {
             if (node instanceof THREE.Mesh) {
                 node.material.wireframe = !node.material.wireframe;
@@ -204,7 +284,7 @@ function update(){
 /////////////
 function render() {
     'use strict';
-    renderer.clear();
+    //renderer.clear();
     renderer.render(scene, activeCamera);
 }
 
@@ -219,7 +299,6 @@ function init() {
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
-    // container
 
     createScene();
     createCameras();
@@ -227,7 +306,6 @@ function init() {
     render();
 
     window.addEventListener('keydown', onKeyDown);
-    // document
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', onResize);
 }
@@ -243,6 +321,7 @@ function animate() {
         ball.position.y = Math.abs(30 * (Math.sin(ball.userData.step)));
         ball.position.z = 15 * (Math.cos(ball.userData.step));
     }
+    update();
     render();
 
     requestAnimationFrame(animate);
@@ -308,8 +387,6 @@ function onKeyDown(e) {
         key6Pressed = true;
     }
 
-    update();
-
 }
 
 ///////////////////////
@@ -320,12 +397,12 @@ function onKeyUp(e){
 
     if (e.keyCode == 69) { //e
         keyEPressed = false;
+        keyEHolded = false;
     }
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = false;
+        key6Holded = false;
     }
-
-    update();
 
 }
 
