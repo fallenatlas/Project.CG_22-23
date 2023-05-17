@@ -18,8 +18,15 @@ let key6Holded = false;
 let keyEPressed = false;
 let keyEHolded = false;
 
-var materials;
-var head, leftArm, rightArm;
+const materials = [
+    { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'red', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'grey', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'darkblue', wireframe: true }) },
+]
+
+//var materials;
+let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot;
 
 //key pressed
 //6 for exemple
@@ -41,10 +48,10 @@ function createScene(){
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
     // create materials
-    let material1 = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-    let material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
-    let material3 = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
-    materials = [material1, material2, material3]
+    //let material1 = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    //let material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
+    //let material3 = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+    //materials = [material1, material2, material3]
     createRobot(0, 0, 0);
     //createTrailer(0, 0, 15);
 }
@@ -112,7 +119,7 @@ function createPerspectiveCamera(x, y, z) {
 function addFace(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.SphereGeometry(8, 10, 10);
-    let mesh = new THREE.Mesh(geometry, materials[0]);
+    let mesh = new THREE.Mesh(geometry, materials[0].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -120,7 +127,7 @@ function addFace(obj, x, y, z) {
 function addEye(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.SphereGeometry(1.5, 10, 10);
-    let mesh = new THREE.Mesh(geometry, materials[2]);
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -128,7 +135,7 @@ function addEye(obj, x, y, z) {
 function addAntenna(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry(1, 1, 9);
-    let mesh = new THREE.Mesh(geometry, materials[1]);
+    let mesh = new THREE.Mesh(geometry, materials[1].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -151,7 +158,7 @@ function addHead(obj, x, y, z) {
 function addTrunk(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(50, 30, 25);
-    let mesh = new THREE.Mesh(geometry, materials[1]);
+    let mesh = new THREE.Mesh(geometry, materials[1].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -160,11 +167,11 @@ function addUpperArm(obj, x, y, z, isLeft) {
     'use strict';
     // arm
     let geometry1 = new THREE.BoxGeometry(8, 30, 8);
-    let arm = new THREE.Mesh(geometry1, materials[0]);
+    let arm = new THREE.Mesh(geometry1, materials[0].mat);
     
     // pipe
     let geometry2 = new THREE.CylinderGeometry(1.5, 1.5, 20);
-    let pipe = new THREE.Mesh(geometry2, materials[2]);
+    let pipe = new THREE.Mesh(geometry2, materials[2].mat);
     if (isLeft) {
         pipe.position.set(-4-1.5, 15, 0);
     }
@@ -183,7 +190,7 @@ function addUpperArm(obj, x, y, z, isLeft) {
 function addLowerArm(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(8, 8, 25);
-    let mesh = new THREE.Mesh(geometry, materials[2]);
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y-4, z);
     obj.add(mesh);
 }
@@ -202,35 +209,92 @@ function addArm(obj, arm, x, y, z, isLeft) {
 function addAbdomen(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(34, 19, 25);
-    let mesh = new THREE.Mesh(geometry, materials[0]);
+    let mesh = new THREE.Mesh(geometry, materials[0].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 function addWaist(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.BoxGeometry(50, 12, 2);
-    let mesh = new THREE.Mesh(geometry, materials[1]);
+    let geometry = new THREE.BoxGeometry(50, 12, 2); //12, 2, 1
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
-function addWheel() {
-    // têm que ter raio 10
+function addLeg(obj, side, x, y, z) {
+    'use strict'
+    let leg = new THREE.Object3D();
+
+    addTopLeg(leg, 0, -2, -0.75);
+    addBottomLeg(leg, 0, -10, -0);
+    addWheel(leg, 2.5 * side, -8, 0);
+    addWheel(leg, 2.5 * side, -13, 0);
+    
+    if (side == 1) { rightFoot = addFoot(leg, 0, -16, -1.5); }
+    else { leftFoot = addFoot(leg, 0, -16, -1.5); }
+
+    leg.position.set(x, y, z);
+
+    obj.add(leg);
 }
 
-function addLegs() {
-    // legs -> variável global
+function addWheel(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.CylinderGeometry( 10, 10, 8, 32 ); 
+    let mesh = new THREE.Mesh(geometry, materials[0].mat);
+    mesh.rotateZ(Math.PI / 2);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addTopLeg(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(1.5, 4, 1.5);
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addBottomLeg(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(3, 12, 3);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addFoot(obj, x, y, z) {
+    'use strict'
+    let foot = new THREE.Object3D();
+
+    addFootBase(foot, 0, 1.5, 2.5);
+
+    foot.position.set(x, y, z);
+
+    obj.add(foot);
+}
+
+function addFootBase(obj, x, y, z) {
+    'use strict'
+    let geometry = new THREE.BoxGeometry(3, 3, 5);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
 }
 
 function addWaistToFeet(obj, x, y, z) {
-    'use strict';
+    'use strict'
     let waistToFeet = new THREE.Object3D();
-    addWaist(waistToFeet, 0, 5, 12.5+1);
-    //addWheel(waistToFeet, hroda/2+17, 0, 0);
-    //addWheel(waistToFeet, -hroda/2-17, 0, 0);
-    //addLegs(waistToFeet);
+    //0, 0, 4.5
+    addWaist(waistToFeet, 0, 0, 12.5+1);
+    addWheel(waistToFeet, 4+17, 0, 0); // objeto novo para a roda e rodar esse??
+    addWheel(waistToFeet, -4-17, 0, 0);
+    leftLeg = addLeg(waistToFeet, 1, 2.5, 0, 0);
+    rightLeg = addLeg(waistToFeet, -1, -2.5, 0, 0);
+
     waistToFeet.position.set(x, y, z);
+
     obj.add(waistToFeet);
 }
 
@@ -449,7 +513,9 @@ function onKeyUp(e){
 
 }
 
-
+///////////////////////
+/* LEG */
+///////////////////////
 
 // re-adjust orthographic camera
 /*
