@@ -11,12 +11,15 @@ let activeCamera, cameras, scene, renderer;
 
 let geometry, material, mesh;
 
-let ball;
+//let ball;
 
 let key6Pressed = false;
 let key6Holded = false;
 let keyEPressed = false;
 let keyEHolded = false;
+
+var materials;
+var head, leftArm, rightArm;
 
 //key pressed
 //6 for exemple
@@ -37,11 +40,13 @@ function createScene(){
 
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
-
-    //createRobot(0, 8, 0);
+    // create materials
+    let material1 = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    let material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
+    let material3 = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
+    materials = [material1, material2, material3]
+    createRobot(0, 0, 0);
     //createTrailer(0, 0, 15);
-    createTable(0, 8, 0);
-    createBall(0, 0, 15);
 }
 
 //////////////////////
@@ -50,9 +55,12 @@ function createScene(){
 
 function createCameras() {
     'use strict';
-    let frontViewCamera = createOrthogonalCamera(0, 0, 50);
-    let latViewCamera = createOrthogonalCamera(50, 0, 0);
-    let topViewCamera = createOrthogonalCamera(0, 50, 0);
+    //let frontViewCamera = createOrthogonalCamera(0, 0, 50);
+    let frontViewCamera = createPerspectiveCamera(0, 20, 200);
+    //let latViewCamera = createOrthogonalCamera(50, 0, 0);
+    let latViewCamera = createPerspectiveCamera(100, 20, 0);
+    //let topViewCamera = createOrthogonalCamera(0, 50, 0);
+    let topViewCamera = createPerspectiveCamera(0, 100, 0);
     let isoCameraO = createOrthogonalCamera(50, 50, 50);
     let isoCameraP = createPerspectiveCamera(50, 50, 50);
 
@@ -101,123 +109,162 @@ function createPerspectiveCamera(x, y, z) {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 
-function addTableLeg(obj, x, y, z) {
-    'use strict';
-
-    let geometry = new THREE.BoxGeometry(2, 6, 2);
-    let mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y - 3, z);
-    obj.add(mesh);
-}
-
-function addTableTop(obj, x, y, z) {
-    'use strict';
-    let geometry = new THREE.BoxGeometry(60, 2, 20);
-    let mesh = new THREE.Mesh(geometry, material);
-    mesh.position.set(x, y, z);
-    obj.add(mesh);
-}
-
-function createBall(x, y, z) {
-    'use strict';
-
-    ball = new THREE.Object3D();
-    ball.userData = { jumping: true, step: 0 };
-
-    material = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-    geometry = new THREE.SphereGeometry(4, 10, 10);
-    mesh = new THREE.Mesh(geometry, material);
-
-    ball.add(mesh);
-
-    scene.add(ball);
-
-    ball.position.set(x, y, z);
-}
-
-
-function createTable(x, y, z) {
-    'use strict';
-
-    let table = new THREE.Object3D();
-
-    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-
-    
-    addTableTop(table, 0, 0, 0);
-    addTableLeg(table, -25, -1, -8);
-    addTableLeg(table, -25, -1, 8);
-    addTableLeg(table, 25, -1, 8);
-    addTableLeg(table, 25, -1, -8);
-
-    scene.add(table);
-
-    table.position.x = x;
-    table.position.y = y;
-    table.position.z = z;
-}
-
 function addFace(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.SphereGeometry(2, 2, 2);
-    let mesh = new THREE.Mesh(geometry, material);
+    let geometry = new THREE.SphereGeometry(8, 10, 10);
+    let mesh = new THREE.Mesh(geometry, materials[0]);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 function addEye(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.SphereGeometry(0.5, 0.5, 0.5);
-    let mesh = new THREE.Mesh(geometry, material);
+    let geometry = new THREE.SphereGeometry(1.5, 10, 10);
+    let mesh = new THREE.Mesh(geometry, materials[2]);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 function addAntenna(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.SphereGeometry(1, 3, 1);
-    let mesh = new THREE.Mesh(geometry, material);
+    let geometry = new THREE.CylinderGeometry(1, 1, 9);
+    let mesh = new THREE.Mesh(geometry, materials[1]);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 function addHead(obj, x, y, z) {
-    let head = new THREE.Object3D();
-    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
+    'use strict';
+    head = new THREE.Object3D();
 
-    addFace(head, 0, 2, 0);
-    addEye(head, 1, 3, 1.4);
-    addEye(head, -1, 3, 1.4);
-    addAntenna(head, 2, 3.5, 0);
-    addAntenna(head, -2, 3.5, 0);
+    addFace(head, 0, 8, 0);
+    addEye(head, 3, 10, 7);
+    addEye(head, -3, 10, 7);
+    addAntenna(head, 8, 12.5, 0);
+    addAntenna(head, -8, 12.5, 0);
 
     obj.add(head);
 
-    head.position.x = x;
-    head.position.y = y;
-    head.position.z = z;
+    head.position.set(x, y, z);
+}
+
+function addTrunk(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(50, 30, 25);
+    let mesh = new THREE.Mesh(geometry, materials[1]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addUpperArm(obj, x, y, z, isLeft) {
+    'use strict';
+    // arm
+    let geometry1 = new THREE.BoxGeometry(8, 30, 8);
+    let arm = new THREE.Mesh(geometry1, materials[0]);
+    
+    // pipe
+    let geometry2 = new THREE.CylinderGeometry(1.5, 1.5, 20);
+    let pipe = new THREE.Mesh(geometry2, materials[2]);
+    if (isLeft) {
+        pipe.position.set(-4-1.5, 15, 0);
+    }
+    else {
+        pipe.position.set(+4+1.5, 15, 0);
+    }
+
+    // upper arm
+    let upperArm = new THREE.Object3D();
+    upperArm.add(arm);
+    upperArm.add(pipe);
+    upperArm.position.set(x, y, z);
+    obj.add(upperArm);
+}
+
+function addLowerArm(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(8, 8, 25);
+    let mesh = new THREE.Mesh(geometry, materials[2]);
+    mesh.position.set(x, y-4, z);
+    obj.add(mesh);
+}
+
+function addArm(obj, arm, x, y, z, isLeft) {
+    'use strict';
+    arm = new THREE.Object3D();
+    addUpperArm(arm, 0, 0, -12.5+4, isLeft);
+    addLowerArm(arm, 0, -15, 0);
+
+    obj.add(arm);
+
+    arm.position.set(x, y, z);
+}
+
+function addAbdomen(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(34, 19, 25);
+    let mesh = new THREE.Mesh(geometry, materials[0]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addWaist(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(50, 12, 2);
+    let mesh = new THREE.Mesh(geometry, materials[1]);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addWheel() {
+    // têm que ter raio 10
+}
+
+function addLegs() {
+    // legs -> variável global
+}
+
+function addWaistToFeet(obj, x, y, z) {
+    'use strict';
+    let waistToFeet = new THREE.Object3D();
+    addWaist(waistToFeet, 0, 5, 12.5+1);
+    //addWheel(waistToFeet, hroda/2+17, 0, 0);
+    //addWheel(waistToFeet, -hroda/2-17, 0, 0);
+    //addLegs(waistToFeet);
+    waistToFeet.position.set(x, y, z);
+    obj.add(waistToFeet);
+}
+
+function addAbdomenToFeet(obj, x, y, z) {
+    'use strict';
+    let abdomenToFeet = new THREE.Object3D();
+    // abdomen
+    addAbdomen(abdomenToFeet, 0, -9.5, 0);
+
+    //lower body: waist, legs, wheels and feet
+    addWaistToFeet(abdomenToFeet, 0, -19, 0);
+    
+    obj.add(abdomenToFeet);
+    abdomenToFeet.position.set(x, y, z);
 }
 
 function createRobot(x, y, z) {
     'use strict';
 
     let robot = new THREE.Object3D();
-
-    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
-
-    addHead();
-    addAbdomen();
+    addHead(robot, 0, 15, 0);
+    addTrunk(robot, 0, 0, 0);
+    addArm(robot, leftArm, -29, 0, 0, true);
+    addArm(robot, rightArm, 29, 0, 0, false);
+    addAbdomenToFeet(robot, 0, -15, 0);
+    //addAbdomen();
     //-->addCintura();
     //---->addWheel();
     //---->addLeg();
     //------->addFoot();
-    addArm();
 
     scene.add(robot);
 
-    robot.position.x = x;
-    robot.position.y = y;
-    robot.position.z = z;
+    robot.position.set(x, y, z);
 }
 
 function createTrailer(x, y, z) {
@@ -233,9 +280,7 @@ function createTrailer(x, y, z) {
 
     scene.add(trailer);
 
-    trailer.position.x = x;
-    trailer.position.y = y;
-    trailer.position.z = z;
+    trailer.position.set(x, y, z);
 }
 
 //////////////////////
@@ -270,11 +315,9 @@ function update(){
     }
     if (key6Pressed && !key6Holded) { //tecla 6
         key6Holded = true;
-        scene.traverse(function (node) {
-            if (node instanceof THREE.Mesh) {
-                node.material.wireframe = !node.material.wireframe;
-            }
-        });
+        for (let i=0; i < 3; i++) {
+            materials[i].wireframe = !materials[i].wireframe;
+        }
     }
 
 }
@@ -316,11 +359,11 @@ function init() {
 function animate() {
     'use strict';
     
-    if (ball.userData.jumping) {
+    /*if (ball.userData.jumping) {
         ball.userData.step += 0.04;
         ball.position.y = Math.abs(30 * (Math.sin(ball.userData.step)));
         ball.position.z = 15 * (Math.cos(ball.userData.step));
-    }
+    }*/
     update();
     render();
 
