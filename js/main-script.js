@@ -226,13 +226,13 @@ function addLeg(obj, side, x, y, z) {
     'use strict'
     let leg = new THREE.Object3D();
 
-    addTopLeg(leg, 0, -2, -0.75);
-    addBottomLeg(leg, 0, -10, -0);
-    addWheel(leg, 2.5 * side, -8, 0);
-    addWheel(leg, 2.5 * side, -13, 0);
-    
-    if (side == 1) { rightFoot = addFoot(leg, 0, -16, -1.5); }
-    else { leftFoot = addFoot(leg, 0, -16, -1.5); }
+    addTopLeg(leg, 0, -12.5, -3.5);
+    addBottomLeg(leg, 0, -25-25, -0);
+    addWheel(leg, (7 + 4) * side, -25-10-5, 0);
+    addWheel(leg, (7 + 4) * side, -25-10-5-5-10-10, 0);
+
+    if (side == 1) { rightFoot = addFoot(leg, 0, -25-50, -7); }
+    else { leftFoot = addFoot(leg, 0, -25-50, -7); }
 
     leg.position.set(x, y, z);
 
@@ -250,7 +250,7 @@ function addWheel(obj, x, y, z) {
 
 function addTopLeg(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.BoxGeometry(1.5, 4, 1.5);
+    let geometry = new THREE.BoxGeometry(7, 25, 7);
     let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -258,7 +258,7 @@ function addTopLeg(obj, x, y, z) {
 
 function addBottomLeg(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.BoxGeometry(3, 12, 3);
+    let geometry = new THREE.BoxGeometry(14, 50, 14);
     let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -268,7 +268,7 @@ function addFoot(obj, x, y, z) {
     'use strict'
     let foot = new THREE.Object3D();
 
-    addFootBase(foot, 0, 1.5, 2.5);
+    addFootBase(foot, 0, 7, 12.5);
 
     foot.position.set(x, y, z);
 
@@ -277,7 +277,7 @@ function addFoot(obj, x, y, z) {
 
 function addFootBase(obj, x, y, z) {
     'use strict'
-    let geometry = new THREE.BoxGeometry(3, 3, 5);
+    let geometry = new THREE.BoxGeometry(14, 14, 25);
     let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -290,8 +290,8 @@ function addWaistToFeet(obj, x, y, z) {
     addWaist(waistToFeet, 0, 0, 12.5+1);
     addWheel(waistToFeet, 4+17, 0, 0); // objeto novo para a roda e rodar esse??
     addWheel(waistToFeet, -4-17, 0, 0);
-    leftLeg = addLeg(waistToFeet, 1, 2.5, 0, 0);
-    rightLeg = addLeg(waistToFeet, -1, -2.5, 0, 0);
+    leftLeg = addLeg(waistToFeet, 1, 10, 0, 0);
+    rightLeg = addLeg(waistToFeet, -1, -10, 0, 0);
 
     waistToFeet.position.set(x, y, z);
 
@@ -379,11 +379,10 @@ function update(){
     }
     if (key6Pressed && !key6Holded) { //tecla 6
         key6Holded = true;
-        for (let i=0; i < 3; i++) {
-            materials[i].wireframe = !materials[i].wireframe;
+        for (let i=0; i < 4; i++) {
+            materials[i].mat.wireframe = !materials[i].mat.wireframe;
         }
     }
-
 }
 
 /////////////
