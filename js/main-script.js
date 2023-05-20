@@ -9,14 +9,18 @@ const keyCodeOffset = 49;
 
 let activeCamera, cameras, scene, renderer;
 
-let geometry, material, mesh;
-
-//let ball;
+//let geometry, material, mesh;
 
 let key6Pressed = false;
 let key6Holded = false;
-let keyEPressed = false;
+let keyGPressed = false;
+let keyGHolded = false;
+// head rotation
+let keyRHolded = false;
+let keyFHolded = false;
+// arm translation
 let keyEHolded = false;
+let keyDHolded = false;
 
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
@@ -47,11 +51,6 @@ function createScene(){
 
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
-    // create materials
-    //let material1 = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
-    //let material2 = new THREE.MeshBasicMaterial({ color: 0x0000ff, wireframe: true });
-    //let material3 = new THREE.MeshBasicMaterial({ color: 0x000000, wireframe: true });
-    //materials = [material1, material2, material3]
     createRobot(0, 0, 0);
     //createTrailer(0, 0, 15);
 }
@@ -118,16 +117,17 @@ function createPerspectiveCamera(x, y, z) {
 
 function addFace(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.SphereGeometry(8, 10, 10);
-    let mesh = new THREE.Mesh(geometry, materials[0].mat);
+    let geometry = new THREE.BoxGeometry(16, 16, 16);
+    let mesh = new THREE.Mesh(geometry, materials[1].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
 
 function addEye(obj, x, y, z) {
     'use strict';
-    let geometry = new THREE.SphereGeometry(1.5, 10, 10);
-    let mesh = new THREE.Mesh(geometry, materials[2].mat);
+    let geometry = new THREE.CylinderGeometry(1.5, 1.5, 1);
+    let mesh = new THREE.Mesh(geometry, materials[0].mat);
+    mesh.rotateX(Math.PI / 2);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -135,7 +135,7 @@ function addEye(obj, x, y, z) {
 function addAntenna(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry(1, 1, 9);
-    let mesh = new THREE.Mesh(geometry, materials[1].mat);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -143,12 +143,13 @@ function addAntenna(obj, x, y, z) {
 function addHead(obj, x, y, z) {
     'use strict';
     head = new THREE.Object3D();
-
+    // head is in truck mode if nTimes = 16
+    head.userData = { nTimes: 0 };
     addFace(head, 0, 8, 0);
-    addEye(head, 3, 10, 7);
-    addEye(head, -3, 10, 7);
-    addAntenna(head, 8, 12.5, 0);
-    addAntenna(head, -8, 12.5, 0);
+    addEye(head, 3, 10, 8);
+    addEye(head, -3, 10, 8);
+    addAntenna(head, 8+1, 12.5, 0);
+    addAntenna(head, -8-1, 12.5, 0);
 
     obj.add(head);
 
@@ -158,7 +159,7 @@ function addHead(obj, x, y, z) {
 function addTrunk(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(50, 30, 25);
-    let mesh = new THREE.Mesh(geometry, materials[1].mat);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -209,7 +210,7 @@ function addArm(obj, arm, x, y, z, isLeft) {
 function addAbdomen(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(34, 19, 25);
-    let mesh = new THREE.Mesh(geometry, materials[0].mat);
+    let mesh = new THREE.Mesh(geometry, materials[1].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -320,11 +321,6 @@ function createRobot(x, y, z) {
     addArm(robot, leftArm, -29, 0, 0, true);
     addArm(robot, rightArm, 29, 0, 0, false);
     addAbdomenToFeet(robot, 0, -15, 0);
-    //addAbdomen();
-    //-->addCintura();
-    //---->addWheel();
-    //---->addLeg();
-    //------->addFoot();
 
     scene.add(robot);
 
@@ -369,20 +365,39 @@ function handleCollisions(){
 function update(){
     'use strict';
 
-    if (keyEPressed && !keyEHolded) { //e
-        keyEHolded = true;
+    if (keyGPressed && !keyGHolded) { //g
+        keyGHolded = true;
         scene.traverse(function (node) {
             if (node instanceof THREE.AxesHelper) {
                 node.visible = !node.visible;
             }
         });
     }
-    if (key6Pressed && !key6Holded) { //tecla 6
+    if (key6Pressed && !key6Holded) { //key 6
         key6Holded = true;
         for (let i=0; i < 4; i++) {
             materials[i].mat.wireframe = !materials[i].mat.wireframe;
         }
     }
+
+    // head rotation
+    if (keyFHolded && head.userData.nTimes < 16) { //key F/f
+        // fold head
+        head.userData.nTimes += 1;
+        head.rotateX(-Math.PI/16);
+    }
+
+    if (keyRHolded && head.userData.nTimes > 0) { //key R/r
+        head.userData.nTimes -= 1;
+        head.rotateX(Math.PI/16);
+    }
+    // arm translation
+
+    /* enquanto estiver tecla a ser premida
+        rodar cabeça um x ângulo até um máximo
+        quando estiver completamente para baixo ativar cabeça em modo camião
+        variáveis necessárias = saber rotação atual
+    */
 }
 
 /////////////
@@ -421,12 +436,6 @@ function init() {
 /////////////////////
 function animate() {
     'use strict';
-    
-    /*if (ball.userData.jumping) {
-        ball.userData.step += 0.04;
-        ball.position.y = Math.abs(30 * (Math.sin(ball.userData.step)));
-        ball.position.z = 15 * (Math.cos(ball.userData.step));
-    }*/
     update();
     render();
 
@@ -483,14 +492,28 @@ function onKeyDown(e) {
     }
     */
 
-    if (e.keyCode == 69) { //e
-        keyEPressed = true;
+    if (e.keyCode == 71) { //g
+        keyGPressed = true;
     }
     if (cameraInputs.includes(e.keyCode)) { // teclas 1 a 5
         activeCamera = cameras[e.keyCode-keyCodeOffset].cam;
     }
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = true;
+    }
+    // head rotation
+    if (e.keyCode == 82 || e.keyCode == 114) { //tecla R/r
+        keyRHolded = true;
+    }
+    if (e.keyCode == 70 || e.keyCode == 102) { //tecla F/f
+        keyFHolded = true;
+    }
+    // arm translation
+    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
+        keyEHolded = false;
+    }
+    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDHolded = false;
     }
 
 }
@@ -501,13 +524,27 @@ function onKeyDown(e) {
 function onKeyUp(e){
     'use strict';
 
-    if (e.keyCode == 69) { //e
-        keyEPressed = false;
-        keyEHolded = false;
+    if (e.keyCode == 71) { //key g
+        keyGPressed = false;
+        keyGHolded = false;
     }
-    if (e.keyCode == 54) { //tecla 6
+    if (e.keyCode == 54) { //key 6
         key6Pressed = false;
         key6Holded = false;
+    }
+    // head rotation
+    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
+        keyRHolded = false;
+    }
+    if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
+        keyFHolded = false;
+    }
+    // arm translation
+    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
+        keyEHolded = false;
+    }
+    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDHolded = false;
     }
 
 }
