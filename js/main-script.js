@@ -11,8 +11,10 @@ let activeCamera, cameras, scene, renderer;
 
 //let geometry, material, mesh;
 
+// switch solid colors/arames view
 let key6Pressed = false;
 let key6Holded = false;
+// active/deactivate axes helper
 let keyGPressed = false;
 let keyGHolded = false;
 // head rotation
@@ -21,7 +23,17 @@ let keyFHolded = false;
 // arm translation
 let keyEHolded = false;
 let keyDHolded = false;
+// feet rotation
+let keyQHolded = false;
+let keyAHolded = false;
+// legs rotation
+let keyWHolded = false;
+let keySHolded = false;
 
+// boolean to indicate if it is in truck or robot mode
+let isTruck = false;
+
+const foldingSpeed = 16;
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'red', wireframe: true }) },
@@ -29,7 +41,7 @@ const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'darkblue', wireframe: true }) },
 ]
 
-let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot;
+let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, legs;
 
 //key pressed
 //6 for exemple
@@ -245,18 +257,16 @@ function addWaist(obj, x, y, z) {
     obj.add(mesh);
 }
 
-function addLeg(obj, side, x, y, z) {
+function addLeg(obj, leg, side, x, y, z) {
     'use strict'
-    let leg = new THREE.Object3D();
-
     addTopLeg(leg, 0, -12.5, -3.5);
     addBottomLeg(leg, 0, -25-25, -0);
     addWheel(leg, (7 + 4) * side, -25-10-5, 0);
     addWheel(leg, (7 + 4) * side, -25-10-5-5-10-10, 0);
 
-    if (side == 1) { rightFoot = addFoot(leg, 0, -25-50, -7); }
-    else { leftFoot = addFoot(leg, 0, -25-50, -7); }
-
+    if (side == 1) { addFoot(leg, rightFoot, 0, -25-50, -7); }
+    else { addFoot(leg, leftFoot, 0, -25-50, -7); }
+    
     leg.position.set(x, y, z);
 
     obj.add(leg);
@@ -287,10 +297,8 @@ function addBottomLeg(obj, x, y, z) {
     obj.add(mesh);
 }
 
-function addFoot(obj, x, y, z) {
+function addFoot(obj, foot, x, y, z) {
     'use strict'
-    let foot = new THREE.Object3D();
-
     addFootBase(foot, 0, 7, 12.5);
 
     foot.position.set(x, y, z);
@@ -309,16 +317,30 @@ function addFootBase(obj, x, y, z) {
 function addWaistToFeet(obj, x, y, z) {
     'use strict'
     let waistToFeet = new THREE.Object3D();
-    //0, 0, 4.5
     addWaist(waistToFeet, 0, 0, 12.5+1);
     addWheel(waistToFeet, 4+17, 0, 0); // objeto novo para a roda e rodar esse??
     addWheel(waistToFeet, -4-17, 0, 0);
-    leftLeg = addLeg(waistToFeet, 1, 10, 0, 0);
-    rightLeg = addLeg(waistToFeet, -1, -10, 0, 0);
+    addLegs(waistToFeet);
 
     waistToFeet.position.set(x, y, z);
 
     obj.add(waistToFeet);
+}
+
+function addLegs(obj) {
+    leftLeg = new THREE.Object3D();
+    rightLeg = new THREE.Object3D();
+    // legs are in truck mode if nTimes = 16
+    rightLeg.userData = { nTimes: 0 };
+    leftFoot = new THREE.Object3D();
+    rightFoot = new THREE.Object3D();
+    // feet are in truck mode if nTimes = 16
+    rightFoot.userData = { nTimes: 0};
+
+    addLeg(obj, leftLeg, 1, 10, 0, 0);
+    addLeg(obj, rightLeg, -1, -10, 0, 0);
+
+    obj.add(legs);
 }
 
 function addAbdomenToFeet(obj, x, y, z) {
@@ -407,15 +429,15 @@ function update(){
     }
 
     // head rotation (max rotation = -PI rads)
-    if (keyFHolded && head.userData.nTimes < 16) { //key F/f
+    if (keyRHolded && head.userData.nTimes < foldingSpeed) { //key R/r
         // fold head
         head.userData.nTimes += 1;
-        head.rotateX(-Math.PI/16);
+        head.rotateX(-Math.PI/foldingSpeed);
     }
 
-    if (keyRHolded && head.userData.nTimes > 0) { //key R/r
+    if (keyFHolded && head.userData.nTimes > 0) { //key F/f
         head.userData.nTimes -= 1;
-        head.rotateX(Math.PI/16);
+        head.rotateX(Math.PI/foldingSpeed);
     }
     // arm translation (max translation = 8)
     if (keyDHolded && rightArm.userData.nTimes > 0) { //key D/d
@@ -425,11 +447,48 @@ function update(){
         leftArm.translateX(-0.5);
     }
 
-    if (keyEHolded && rightArm.userData.nTimes < 16) { //key E/e
+    if (keyEHolded && rightArm.userData.nTimes < foldingSpeed) { //key E/e
         // arms in
         rightArm.userData.nTimes += 1;
         rightArm.translateX(-0.5);
         leftArm.translateX(0.5);
+    }
+
+    // feet rotation (max rotation = -PI rads)
+    if (keyQHolded && rightFoot.userData.nTimes < foldingSpeed) { //key Q\q
+        // fold feet
+        rightFoot.userData.nTimes += 1;
+        leftFoot.rotateX((Math.PI/2)/foldingSpeed);
+        rightFoot.rotateX((Math.PI/2)/foldingSpeed);
+    }
+
+    if (keyAHolded && rightFoot.userData.nTimes > 0) { //key A/a
+        rightFoot.userData.nTimes -= 1;
+        leftFoot.rotateX(-(Math.PI/2)/foldingSpeed);
+        rightFoot.rotateX(-(Math.PI/2)/foldingSpeed);
+    }
+
+    // legs rotation (max rotation = -PI rads)
+    if (keyWHolded && rightLeg.userData.nTimes < foldingSpeed) { //key W\w
+        // fold feet
+        rightLeg.userData.nTimes += 1;
+        leftLeg.rotateX((Math.PI/2)/foldingSpeed);
+        rightLeg.rotateX((Math.PI/2)/foldingSpeed);
+    }
+
+    if (keySHolded && rightLeg.userData.nTimes > 0) { //key S/s
+        rightLeg.userData.nTimes -= 1;
+        leftLeg.rotateX(-(Math.PI/2)/foldingSpeed);
+        rightLeg.rotateX(-(Math.PI/2)/foldingSpeed);
+    }
+
+    if (head.userData.nTimes == foldingSpeed && rightArm.userData.nTimes == foldingSpeed &&
+        rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed ) {
+        // conditions for being in truck form met
+        isTruck = true;
+    }
+    else {
+        isTruck = false;
     }
 }
 
@@ -553,6 +612,20 @@ function onKeyDown(e) {
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
         keyEHolded = true;
     }
+    // feet rotation
+    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
+        keyQHolded = true;
+    }
+    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
+        keyAHolded = true;
+    }
+    // leg rotation
+    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
+        keyWHolded = true;
+    }
+    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
+        keySHolded = true;
+    }
 }
 
 ///////////////////////
@@ -582,6 +655,20 @@ function onKeyUp(e){
     }
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
         keyEHolded = false;
+    }
+    // feet rotation
+    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
+        keyQHolded = false;
+    }
+    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
+        keyAHolded = false;
+    }
+    // leg rotation
+    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
+        keyWHolded = false;
+    }
+    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
+        keySHolded = false;
     }
 }
 
