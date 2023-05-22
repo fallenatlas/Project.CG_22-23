@@ -79,15 +79,16 @@ function createScene(){
 
 function createCameras() {
     'use strict';
-    //let frontViewCamera = createOrthogonalCamera(0, 0, 50);
-    let frontViewCamera = createPerspectiveCamera(0, 20, 200);
-    //let latViewCamera = createOrthogonalCamera(50, 0, 0);
-    let latViewCamera = createPerspectiveCamera(100, -20, 0);
-    //let topViewCamera = createOrthogonalCamera(0, 50, 0);
-    let topViewCamera = createPerspectiveCamera(0, 100, 0);
-    //let isoCameraO = createOrthogonalCamera(50, 50, 50);
-    let isoCameraO = createPerspectiveCamera(50, 50, 50);
-    let isoCameraP = createPerspectiveCamera(50, 50, 50);
+    let frontViewCamera = createOrthogonalCamera(0, 0, 50);
+    // let frontViewCamera = createPerspectiveCamera(0, 20, 200);
+    let latViewCamera = createOrthogonalCamera(50, 0, 0);
+    // let latViewCamera = createPerspectiveCamera(100, -20, 0);
+    let topViewCamera = createOrthogonalCamera(0, 50, 0);
+    // let topViewCamera = createPerspectiveCamera(0, 100, 0);
+    let isoCameraO = createOrthogonalCamera(50, 50, 50);
+    // let isoCameraO = createPerspectiveCamera(50, 50, 50);
+    let isoCameraP = createPerspectiveCamera(100, 100, 100);
+
 
     cameras = [
         { cam: frontViewCamera },
@@ -103,12 +104,14 @@ function createCameras() {
 function createOrthogonalCamera(x, y, z) {
     'use strict';
     const aspect = window.innerWidth / window.innerHeight;
-    let camera = new THREE.OrthographicCamera( 0.5 * frustumSize * aspect / - 2, 0.5 * frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000);
+    let camera = new THREE.OrthographicCamera( - 0.5 * frustumSize * aspect, 0.5 * frustumSize * aspect, frustumSize / 2, frustumSize / - 2, 1, 1000);
     camera.position.x = x;
     camera.position.y = y;
     camera.position.z = z;
+    camera.zoom = 2;
     camera.lookAt(scene.position);
-    camera.zoom = 1;
+    
+    camera.updateProjectionMatrix();
 
     return camera;
 }
@@ -377,6 +380,8 @@ function createRobot(x, y, z) {
     scene.add(robot);
 
     robot.position.set(x, y, z);
+    robot.userData = { xMax : 27, xMin : -27, yMax : 18, yMin : -34.5, zMax : 14.5, zMin : -87.5};
+    
 }
 
 ////////////////////////
@@ -418,8 +423,13 @@ function createTrailer(x, y, z) {
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions(obj){
+function checkCollisions(){
     'use strict';
+
+    // bounding box
+    /*return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
+    robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax &&
+    robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;*/
 
 }
 
@@ -429,7 +439,7 @@ function checkCollisions(obj){
 ///////////////////////
 function handleCollisions(){
     'use strict';
-
+    // final x = 0; z = -12.5
 }
 
 ////////////
@@ -510,9 +520,10 @@ function update(){
     if (head.userData.nTimes == foldingSpeed && rightArm.userData.nTimes == foldingSpeed &&
         rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed ) {
         // conditions for being in truck form met
-        isTruck = true;
-    } else {
-        isTruck = false;
+        if (checkCollisions()) {
+            CollisionDetected = true;
+            handleCollisions();
+        }
     }
 
     // trailer movimentation
@@ -555,6 +566,7 @@ function update(){
             robot.translateX(-0.5);
         }
     }
+}
 
 /////////////
 /* DISPLAY */
@@ -608,50 +620,24 @@ function onResize() {
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
-        /*for (let i = 0; i < 4; i++) {
-            cameras[i].cam.left = - 0.5 * frustumSize * aspect / 2;
-            cameras[i].cam.right = 0.5 * frustumSize * aspect / 2;
+        for (let i = 0; i < 4; i++) {
+            cameras[i].cam.left = - 0.5 * frustumSize * aspect;
+            cameras[i].cam.right = 0.5 * frustumSize * aspect;
             cameras[i].cam.top = frustumSize / 2;
             cameras[i].cam.bottom = - frustumSize / 2;
             cameras[i].cam.updateProjectionMatrix();
 
         }
         cameras[4].cam.aspect = aspect;
-        cameras[4].cam.updateProjectionMatrix();*/
-        for (let i = 0; i < 5; i++) {
-            cameras[i].cam.aspect = aspect;
-            cameras[i].cam.updateProjectionMatrix();
-        }
-        
+        cameras[4].cam.updateProjectionMatrix();
     }
 }
-
 
 ///////////////////////
 /* KEY DOWN CALLBACK */
 ///////////////////////
 function onKeyDown(e) {
     'use strict';
-
-    /*
-    if (e.keyCode == 69) { //e
-        scene.traverse(function (node) {
-            if (node instanceof THREE.AxesHelper) {
-                node.visible = !node.visible;
-            }
-        });
-    }
-    if (cameraInputs.includes(e.keyCode)) { // teclas 1 a 5
-        activeCamera = cameras[e.keyCode-keyCodeOffset].cam;
-    }
-    if (e.keyCode == 54) { //tecla 6
-        scene.traverse(function (node) {
-            if (node instanceof THREE.Mesh) {
-                node.material.wireframe = !node.material.wireframe;
-            }
-        });
-    }
-    */
 
     if (e.keyCode == 71) { //g
         keyGPressed = true;
@@ -763,18 +749,3 @@ function onKeyUp(e){
         keyArrowDHolded = true;
     }
 }
-
-///////////////////////
-/* LEG */
-///////////////////////
-
-// re-adjust orthographic camera
-/*
-function render() {
- 
-    if (resizeRendererToDisplaySize(renderer)) {
-      camera.right = canvas.width;
-      camera.bottom = canvas.height;
-      camera.updateProjectionMatrix();
-    }
-*/
