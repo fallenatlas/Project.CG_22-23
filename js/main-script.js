@@ -381,6 +381,7 @@ function createRobot(x, y, z) {
 
 ////////////////////////
 /* CREATE TRAILER */
+
 function addContainer(obj, x, y, z) {
     'use strict';
     var cube_material = new THREE.MeshBasicMaterial({ color: 0x0000FF, wireframe: true });    
@@ -510,11 +511,50 @@ function update(){
         rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed ) {
         // conditions for being in truck form met
         isTruck = true;
-    }
-    else {
+    } else {
         isTruck = false;
     }
-}
+
+    // trailer movimentation
+    if(keyArrowLHolded && !keyArrowRHolded) { //left arrow
+        if (isTruck) {
+            trailer.translateX(-0.5);
+        } else {
+            robot.translateX(-0.5);
+        }
+    }
+    if(keyArrowRHolded && !keyArrowLHolded) { //right arrow
+        if (isTruck) {
+            trailer.translateX(0.5);
+        } else {
+            robot.translateX(0.5);
+        }
+    }
+    if(keyArrowUHolded && !keyArrowDHolded) { //up arrow
+        if (isTruck) {
+            trailer.translateZ(-0.5);
+        } else {
+            robot.translateZ(-0.5);
+        }
+    }
+    if(keyArrowDHolded && !keyArrowUHolded) { //down arrow
+        if (isTruck) {
+            trailer.translateZ(0.5);
+        } else {
+            robot.translateZ(0.5);
+        }
+    }
+    //Deviamos representar combinacoes de teclas?
+    if(keyArrowUHolded && keyArrowLHolded) { //up arrow + left arrow
+        if (isTruck) {
+            trailer.translateZ(-0.5);
+            trailer.translateX(-0.5);
+        }
+        else {
+            robot.translateZ(-0.5);
+            robot.translateX(-0.5);
+        }
+    }
 
 /////////////
 /* DISPLAY */
@@ -710,17 +750,17 @@ function onKeyUp(e){
     }
     // trailer slide
     if (e.keyCode == 37) { //key arrow left
-        keyArrowHolded = true;
+        keyArrowLHolded = true;
     }
     if (e.keyCode == 39) { //key arrow right
-        keyArrowHolded = true;
+        keyArrowRHolded = true;
     }
     // trailer rotation
     if (e.keyCode == 38) { //key arrow up
-        keyArrowHolded = true;
+        keyArrowUHolded = true;
     }
     if (e.keyCode == 40) { //key arrow down
-        keyArrowHolded = true;
+        keyArrowDHolded = true;
     }
 }
 
