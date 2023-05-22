@@ -29,6 +29,13 @@ let keyAHolded = false;
 // legs rotation
 let keyWHolded = false;
 let keySHolded = false;
+// trailer slide
+let keyArrowLHolded = false;
+let keyArrowRHolded = false;
+// trailer rotation
+let keyArrowUHolded = false;
+let keyArrowDHolded = false;
+
 
 // boolean to indicate if it is in truck or robot mode
 let isTruck = false;
@@ -374,30 +381,47 @@ function createRobot(x, y, z) {
 
 ////////////////////////
 /* CREATE TRAILER */
+function addContainer(obj, x, y, z) {
+    'use strict';
+    var cube_material = new THREE.MeshBasicMaterial({ color: 0x0000FF, wireframe: true });    
+    geometry = new THREE.BoxGeometry(0, 50, 116);
+    let mesh = new THREE.Mesh(geometry, cube_material); //materials[3].mat
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addConnectionPiece(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.BoxGeometry(5, 5, 5);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
 
 function createTrailer(x, y, z) {
     'use strict';
-
     let trailer = new THREE.Object3D();
-
     material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
 
-    
-    //addContainer();
-    //addWheel();
+    addWheel(trailer, 4+17, -34, -85);
+    addWheel(trailer, -4-17, -34, -85);
+    addWheel(trailer, -4-17, -34, -96);
+    addWheel(trailer, -4-17, -34, -96);
+    addContainer(trailer);
+    addConnectionPiece(trailer);
 
     scene.add(trailer);
-
     trailer.position.set(x, y, z);
 }
 
 //////////////////////
 /* CHECK COLLISIONS */
 //////////////////////
-function checkCollisions(){
+function checkCollisions(obj){
     'use strict';
 
 }
+
 
 ///////////////////////
 /* HANDLE COLLISIONS */
@@ -626,6 +650,20 @@ function onKeyDown(e) {
     if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
         keySHolded = true;
     }
+    // trailer slide
+    if (e.keyCode == 37) { //key arrow left
+        keyArrowLHolded = true;
+    }
+    if (e.keyCode == 39) { //key arrow right
+        keyArrowRHolded = true;
+    }
+    // trailer rotation
+    if (e.keyCode == 38) { //key arrow up
+        keyArrowUHolded = true;
+    }
+    if (e.keyCode == 40) { //key arrow down
+        keyArrowDHolded = true;
+    }
 }
 
 ///////////////////////
@@ -669,6 +707,20 @@ function onKeyUp(e){
     }
     if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
         keySHolded = false;
+    }
+    // trailer slide
+    if (e.keyCode == 37) { //key arrow left
+        keyArrowHolded = true;
+    }
+    if (e.keyCode == 39) { //key arrow right
+        keyArrowHolded = true;
+    }
+    // trailer rotation
+    if (e.keyCode == 38) { //key arrow up
+        keyArrowHolded = true;
+    }
+    if (e.keyCode == 40) { //key arrow down
+        keyArrowHolded = true;
     }
 }
 
