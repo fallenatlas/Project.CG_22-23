@@ -7,11 +7,9 @@ const frustumSize = 600;
 const cameraInputs = [49, 50, 51, 52, 53];
 const keyCodeOffset = 49;
 
-let activeCamera, cameras, scene, renderer;
+let activeCamera, cameras, scene, renderer, clock;
 
-//let geometry, material, mesh;
-
-// switch solid colors/arames view
+// switch solid colors/wireframe view
 let key6Pressed = false;
 let key6Holded = false;
 // active/deactivate axes helper
@@ -32,13 +30,12 @@ let keySHolded = false;
 // trailer slide
 let keyArrowLHolded = false;
 let keyArrowRHolded = false;
-// trailer rotation
 let keyArrowUHolded = false;
 let keyArrowDHolded = false;
 
 
 // boolean to indicate if it is in truck or robot mode
-let isTruck = false;
+let CollisionDetected = false;
 
 const foldingSpeed = 16;
 const materials = [
@@ -49,13 +46,6 @@ const materials = [
 ]
 
 let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, legs;
-
-//key pressed
-//6 for exemple
-//let key6pressed = false
-//onKeyDown : key6pressed = true
-//onKeyUp : key6pressed = false
-
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -69,8 +59,15 @@ function createScene(){
 
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
-    createRobot(0, 0, 0);
-    //createTrailer(0, 0, 15);
+    //createRobot(0, 0, 0);
+    createTrailer(0, 0, 0);
+}
+/////////////////////
+/* CREATE CLOCK */
+/////////////////////
+function createClock(){
+    'use strict';
+    //clock = new THREE.clock();
 }
 
 //////////////////////
@@ -88,7 +85,6 @@ function createCameras() {
     let isoCameraO = createOrthogonalCamera(50, 50, 50);
     // let isoCameraO = createPerspectiveCamera(50, 50, 50);
     let isoCameraP = createPerspectiveCamera(100, 100, 100);
-
 
     cameras = [
         { cam: frontViewCamera },
@@ -127,11 +123,6 @@ function createPerspectiveCamera(x, y, z) {
 
     return camera;
 }
-
-
-/////////////////////
-/* CREATE LIGHT(S) */
-/////////////////////
 
 ////////////////////////
 /* CREATE OBJECT3D(S) */
@@ -350,7 +341,7 @@ function addLegs(obj) {
     addLeg(obj, leftLeg, 1, 10, 0, 0);
     addLeg(obj, rightLeg, -1, -10, 0, 0);
 
-    obj.add(legs);
+    //obj.add(legs);
 }
 
 function addAbdomenToFeet(obj, x, y, z) {
@@ -388,10 +379,9 @@ function createRobot(x, y, z) {
 /* CREATE TRAILER */
 
 function addContainer(obj, x, y, z) {
-    'use strict';
-    var cube_material = new THREE.MeshBasicMaterial({ color: 0x0000FF, wireframe: true });    
-    geometry = new THREE.BoxGeometry(0, 50, 116);
-    let mesh = new THREE.Mesh(geometry, cube_material); //materials[3].mat
+    'use strict';    
+    let geometry = new THREE.BoxGeometry(50, 50, 116);
+    let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -399,7 +389,7 @@ function addContainer(obj, x, y, z) {
 function addConnectionPiece(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(5, 5, 5);
-    let mesh = new THREE.Mesh(geometry, materials[3].mat);
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -407,14 +397,13 @@ function addConnectionPiece(obj, x, y, z) {
 function createTrailer(x, y, z) {
     'use strict';
     let trailer = new THREE.Object3D();
-    material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: true });
 
     addWheel(trailer, 4+17, -34, -85);
     addWheel(trailer, -4-17, -34, -85);
     addWheel(trailer, -4-17, -34, -96);
     addWheel(trailer, -4-17, -34, -96);
-    addContainer(trailer);
-    addConnectionPiece(trailer);
+    addContainer(trailer, 0, 0, 0);
+    //addConnectionPiece(trailer);
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
@@ -425,7 +414,6 @@ function createTrailer(x, y, z) {
 //////////////////////
 function checkCollisions(){
     'use strict';
-
     // bounding box
     /*return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
     robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax &&
@@ -445,24 +433,14 @@ function handleCollisions(){
 ////////////
 /* UPDATE */
 ////////////
-function update(){
+function isTruck(){
     'use strict';
+    return head.userData.nTimes == foldingSpeed && rightArm.userData.nTimes == foldingSpeed &&
+    rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed;
+}
 
-    if (keyGPressed && !keyGHolded) { //g
-        keyGHolded = true;
-        scene.traverse(function (node) {
-            if (node instanceof THREE.AxesHelper) {
-                node.visible = !node.visible;
-            }
-        });
-    }
-    if (key6Pressed && !key6Holded) { //key 6
-        key6Holded = true;
-        for (let i=0; i < 4; i++) {
-            materials[i].mat.wireframe = !materials[i].mat.wireframe;
-        }
-    }
-
+function handleMovement(){
+    'use strict';
     // head rotation (max rotation = -PI rads)
     if (keyRHolded && head.userData.nTimes < foldingSpeed) { //key R/r
         // fold head
@@ -488,7 +466,6 @@ function update(){
         rightArm.translateX(-0.5);
         leftArm.translateX(0.5);
     }
-
     // feet rotation (max rotation = -PI rads)
     if (keyQHolded && rightFoot.userData.nTimes < foldingSpeed) { //key Q\q
         // fold feet
@@ -502,7 +479,6 @@ function update(){
         leftFoot.rotateX(-(Math.PI/2)/foldingSpeed);
         rightFoot.rotateX(-(Math.PI/2)/foldingSpeed);
     }
-
     // legs rotation (max rotation = -PI rads)
     if (keyWHolded && rightLeg.userData.nTimes < foldingSpeed) { //key W\w
         // fold feet
@@ -516,55 +492,47 @@ function update(){
         leftLeg.rotateX(-(Math.PI/2)/foldingSpeed);
         rightLeg.rotateX(-(Math.PI/2)/foldingSpeed);
     }
-
-    if (head.userData.nTimes == foldingSpeed && rightArm.userData.nTimes == foldingSpeed &&
-        rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed ) {
-        // conditions for being in truck form met
-        if (checkCollisions()) {
-            CollisionDetected = true;
-            handleCollisions();
-        }
-    }
-
     // trailer movimentation
-    if(keyArrowLHolded && !keyArrowRHolded) { //left arrow
-        if (isTruck) {
-            trailer.translateX(-0.5);
-        } else {
-            robot.translateX(-0.5);
+    if(keyArrowLHolded) { //left arrow
+        trailer.translateX(-0.5);
+    }
+    if(keyArrowRHolded) { //right arrow
+        trailer.translateX(0.5);
+    }
+    if(keyArrowUHolded) { //up arrow
+        trailer.translateZ(-0.5);
+    }
+    if(keyArrowDHolded) { //down arrow
+        trailer.translateZ(0.5);
+    }
+}
+
+function update(){
+    'use strict';
+
+    if (keyGPressed && !keyGHolded) { //g
+        keyGHolded = true;
+        scene.traverse(function (node) {
+            if (node instanceof THREE.AxesHelper) {
+                node.visible = !node.visible;
+            }
+        });
+    }
+    if (key6Pressed && !key6Holded) { //key 6
+        key6Holded = true;
+        for (let i=0; i < 4; i++) {
+            materials[i].mat.wireframe = !materials[i].mat.wireframe;
         }
     }
-    if(keyArrowRHolded && !keyArrowLHolded) { //right arrow
-        if (isTruck) {
-            trailer.translateX(0.5);
-        } else {
-            robot.translateX(0.5);
-        }
+
+    if (!CollisionDetected) {
+        handleMovement();
+        /*if (isTruck() && checkCollisions()) {
+            CollisionDetected = true;
+        }*/
     }
-    if(keyArrowUHolded && !keyArrowDHolded) { //up arrow
-        if (isTruck) {
-            trailer.translateZ(-0.5);
-        } else {
-            robot.translateZ(-0.5);
-        }
-    }
-    if(keyArrowDHolded && !keyArrowUHolded) { //down arrow
-        if (isTruck) {
-            trailer.translateZ(0.5);
-        } else {
-            robot.translateZ(0.5);
-        }
-    }
-    //Deviamos representar combinacoes de teclas?
-    if(keyArrowUHolded && keyArrowLHolded) { //up arrow + left arrow
-        if (isTruck) {
-            trailer.translateZ(-0.5);
-            trailer.translateX(-0.5);
-        }
-        else {
-            robot.translateZ(-0.5);
-            robot.translateX(-0.5);
-        }
+    if (CollisionDetected) {
+        handleCollisions();
     }
 }
 
@@ -590,6 +558,7 @@ function init() {
     document.body.appendChild(renderer.domElement);
 
     createScene();
+    createClock();
     createCameras();
 
     render();
@@ -606,7 +575,6 @@ function animate() {
     'use strict';
     update();
     render();
-
     requestAnimationFrame(animate);
 }
 
@@ -639,7 +607,7 @@ function onResize() {
 function onKeyDown(e) {
     'use strict';
 
-    if (e.keyCode == 71) { //g
+    if (e.keyCode == 71) { //g (remove)
         keyGPressed = true;
     }
     if (cameraInputs.includes(e.keyCode)) { //keys 1 to 5
@@ -683,7 +651,6 @@ function onKeyDown(e) {
     if (e.keyCode == 39) { //key arrow right
         keyArrowRHolded = true;
     }
-    // trailer rotation
     if (e.keyCode == 38) { //key arrow up
         keyArrowUHolded = true;
     }
@@ -698,7 +665,7 @@ function onKeyDown(e) {
 function onKeyUp(e){
     'use strict';
 
-    if (e.keyCode == 71) { //key g
+    if (e.keyCode == 71) { //key g (remove)
         keyGPressed = false;
         keyGHolded = false;
     }
@@ -736,16 +703,15 @@ function onKeyUp(e){
     }
     // trailer slide
     if (e.keyCode == 37) { //key arrow left
-        keyArrowLHolded = true;
+        keyArrowLHolded = false;
     }
     if (e.keyCode == 39) { //key arrow right
-        keyArrowRHolded = true;
+        keyArrowRHolded = false;
     }
-    // trailer rotation
     if (e.keyCode == 38) { //key arrow up
-        keyArrowUHolded = true;
+        keyArrowUHolded = false;
     }
     if (e.keyCode == 40) { //key arrow down
-        keyArrowDHolded = true;
+        keyArrowDHolded = false;
     }
 }
