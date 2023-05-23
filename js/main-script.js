@@ -37,7 +37,7 @@ let keyArrowDHolded = false;
 // boolean to indicate if it is in truck or robot mode
 let CollisionDetected = false;
 
-const foldingSpeed = 16;
+const foldingSpeed = 2;
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'red', wireframe: true }) },
@@ -45,7 +45,9 @@ const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'darkblue', wireframe: true }) },
 ]
 
-let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, legs;
+let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot;
+let robot, trailer;
+let trailerHelper;
 
 /////////////////////
 /* CREATE SCENE(S) */
@@ -59,15 +61,15 @@ function createScene(){
 
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
-    //createRobot(0, 0, 0);
-    createTrailer(0, 0, 0);
+    createRobot(0, 0, 0);
+    createTrailer(0, 0, -240);
 }
 /////////////////////
 /* CREATE CLOCK */
 /////////////////////
 function createClock(){
     'use strict';
-    //clock = new THREE.clock();
+    clock = new THREE.Clock();
 }
 
 //////////////////////
@@ -336,12 +338,10 @@ function addLegs(obj) {
     leftFoot = new THREE.Object3D();
     rightFoot = new THREE.Object3D();
     // feet are in truck mode if nTimes = 16
-    rightFoot.userData = { nTimes: 0};
+    rightFoot.userData = { nTimes: 0 };
 
     addLeg(obj, leftLeg, 1, 10, 0, 0);
     addLeg(obj, rightLeg, -1, -10, 0, 0);
-
-    //obj.add(legs);
 }
 
 function addAbdomenToFeet(obj, x, y, z) {
@@ -362,7 +362,7 @@ function addAbdomenToFeet(obj, x, y, z) {
 
 function createRobot(x, y, z) {
     'use strict';
-    let robot = new THREE.Object3D();
+    robot = new THREE.Object3D();
     addHead(robot, 0, 15, 0);
     addTrunk(robot, 0, 0, 0);
     addArms(robot);
@@ -371,8 +371,13 @@ function createRobot(x, y, z) {
     scene.add(robot);
 
     robot.position.set(x, y, z);
-    robot.userData = { xMax : 27, xMin : -27, yMax : 18, yMin : -34.5, zMax : 14.5, zMin : -87.5};
+    robot.userData = { xMax : 28, xMin : -28, yMax : 25, yMin : -44, zMax : 14.5, zMin : -100};
     
+    const box = new THREE.Box3( new THREE.Vector3( robot.userData.xMin, robot.userData.yMin, robot.userData.zMin ), new THREE.Vector3( robot.userData.xMax, robot.userData.yMax, robot.userData.zMax ) );
+    //box.setFromCenterAndSize( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, -172.5 ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, 0 ) );
+
+    const helper = new THREE.Box3Helper( box, 0xffff00 );
+    scene.add( helper );
 }
 
 ////////////////////////
@@ -380,7 +385,7 @@ function createRobot(x, y, z) {
 
 function addContainer(obj, x, y, z) {
     'use strict';    
-    let geometry = new THREE.BoxGeometry(50, 50, 116);
+    let geometry = new THREE.BoxGeometry(34, 50, 135);
     let mesh = new THREE.Mesh(geometry, materials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -396,17 +401,24 @@ function addConnectionPiece(obj, x, y, z) {
 
 function createTrailer(x, y, z) {
     'use strict';
-    let trailer = new THREE.Object3D();
+    trailer = new THREE.Object3D();
 
-    addWheel(trailer, 4+17, -34, -85);
-    addWheel(trailer, -4-17, -34, -85);
-    addWheel(trailer, -4-17, -34, -96);
-    addWheel(trailer, -4-17, -34, -96);
+    addWheel(trailer, 4+17, -34, -32.5);
+    addWheel(trailer, -4-17, -34, -32.5);
+    addWheel(trailer, 4+17, -34, -57.5);
+    addWheel(trailer, -4-17, -34, -57.5);
     addContainer(trailer, 0, 0, 0);
-    //addConnectionPiece(trailer);
+    addConnectionPiece(trailer, 0, -22.5, 70);
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
+    trailer.userData = { xMax : 25, xMin : -25, yMax : 25, yMin : -44, zMax : -167.5, zMin : -307.5};
+
+    const box = new THREE.Box3( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, trailer.userData.zMin ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, trailer.userData.zMax ) );
+    //box.setFromCenterAndSize( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, -172.5 ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, 0 ) );
+
+    trailerHelper = new THREE.Box3Helper( box, 0xffff00 );
+    scene.add( trailerHelper );
 }
 
 //////////////////////
@@ -415,9 +427,7 @@ function createTrailer(x, y, z) {
 function checkCollisions(){
     'use strict';
     // bounding box
-    /*return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
-    robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax &&
-    robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;*/
+    return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax && robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax && robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;
 
 }
 
@@ -425,9 +435,18 @@ function checkCollisions(){
 ///////////////////////
 /* HANDLE COLLISIONS */
 ///////////////////////
-function handleCollisions(){
+function handleCollisions(delta){
     'use strict';
     // final x = 0; z = -12.5
+    // final zMax = -12.5, xMax = 25
+    let movementX = 25 - trailer.userData.x;
+    let movementZ = -12.5 - trailer.userData.z;
+    let direction = new THREE.Vector3(movementX, 0, movementZ);
+    direction.normalize();
+    // t_total_x = movementX/16; t_total_y = movementY/16
+    trailer.translateOnAxis(direction, 16 * delta);
+    //trailer.translateX(movementX);
+    //trailer.translateZ(movementZ);
 }
 
 ////////////
@@ -439,77 +458,153 @@ function isTruck(){
     rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed;
 }
 
-function handleMovement(){
+function handleMovement(delta) {
     'use strict';
     // head rotation (max rotation = -PI rads)
     if (keyRHolded && head.userData.nTimes < foldingSpeed) { //key R/r
         // fold head
-        head.userData.nTimes += 1;
-        head.rotateX(-Math.PI/foldingSpeed);
+        /*
+        let delta_head = head.userData.nTimes + delta > foldingSpeed ? foldingSpeed - head.userData.nTimes : delta;
+        head.userData.nTimes += delta_head;
+        head.rotateX(-Math.PI/foldingSpeed * delta_head);
+        */
+        head.userData.nTimes += delta;
+        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x - (Math.PI/foldingSpeed * delta), -Math.PI, 0);
+        if (head.rotation.x == -Math.PI) {
+            head.userData.nTimes = foldingSpeed;
+        }
     }
 
     if (keyFHolded && head.userData.nTimes > 0) { //key F/f
-        head.userData.nTimes -= 1;
-        head.rotateX(Math.PI/foldingSpeed);
+        /*head.userData.nTimes -= delta;
+        head.rotateX(Math.PI/foldingSpeed * delta);*/
+        head.userData.nTimes -= delta;
+        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + (Math.PI/foldingSpeed * delta), -Math.PI, 0);
+        if (head.rotation.x == 0) {
+            head.userData.nTimes = 0;
+        }
+        
     }
     // arm translation (max translation = 8)
     if (keyDHolded && rightArm.userData.nTimes > 0) { //key D/d
         // arms out
-        rightArm.userData.nTimes -= 1;
-        rightArm.translateX(0.5);
-        leftArm.translateX(-0.5);
+        /*rightArm.userData.nTimes -= delta;
+        rightArm.translateX(0.5 * delta);
+        leftArm.translateX(-0.5 * delta);*/
+        rightArm.userData.nTimes -= delta;
+        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + (8/foldingSpeed * delta), 29-8, 29);
+        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - (8/foldingSpeed * delta), -29, -29+8);
+        if (rightArm.position.x == 29) {
+            rightArm.userData.nTimes = 0;
+        }
     }
 
     if (keyEHolded && rightArm.userData.nTimes < foldingSpeed) { //key E/e
         // arms in
-        rightArm.userData.nTimes += 1;
-        rightArm.translateX(-0.5);
-        leftArm.translateX(0.5);
+        /*rightArm.userData.nTimes += delta;
+        rightArm.translateX(-0.5 * delta);
+        leftArm.translateX(0.5 * delta);*/
+
+        rightArm.userData.nTimes += delta;
+        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x - (8/foldingSpeed * delta), 29-8, 29);
+        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x + (8/foldingSpeed * delta), -29, -29+8);
+        if (rightArm.position.x == 29-8) {
+            rightArm.userData.nTimes = foldingSpeed;
+        }
     }
     // feet rotation (max rotation = -PI rads)
     if (keyQHolded && rightFoot.userData.nTimes < foldingSpeed) { //key Q\q
         // fold feet
-        rightFoot.userData.nTimes += 1;
-        leftFoot.rotateX((Math.PI/2)/foldingSpeed);
-        rightFoot.rotateX((Math.PI/2)/foldingSpeed);
+        /*
+        rightFoot.userData.nTimes += delta;
+        leftFoot.rotateX((Math.PI/2)/foldingSpeed * delta);
+        rightFoot.rotateX((Math.PI/2)/foldingSpeed * delta);
+        */
+       
+        rightFoot.userData.nTimes += delta;
+        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightFoot.rotation.x == Math.PI/2) {
+            rightFoot.userData.nTimes = foldingSpeed;
+        }
     }
 
     if (keyAHolded && rightFoot.userData.nTimes > 0) { //key A/a
-        rightFoot.userData.nTimes -= 1;
-        leftFoot.rotateX(-(Math.PI/2)/foldingSpeed);
-        rightFoot.rotateX(-(Math.PI/2)/foldingSpeed);
+        /*
+        rightFoot.userData.nTimes -= delta;
+        leftFoot.rotateX(-(Math.PI/2)/foldingSpeed * delta);
+        rightFoot.rotateX(-(Math.PI/2)/foldingSpeed * delta);
+        */
+       
+        rightFoot.userData.nTimes -= delta;
+        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightFoot.rotation.x == 0) {
+            rightFoot.userData.nTimes = 0;
+        }
     }
     // legs rotation (max rotation = -PI rads)
     if (keyWHolded && rightLeg.userData.nTimes < foldingSpeed) { //key W\w
         // fold feet
-        rightLeg.userData.nTimes += 1;
-        leftLeg.rotateX((Math.PI/2)/foldingSpeed);
-        rightLeg.rotateX((Math.PI/2)/foldingSpeed);
+        /*
+        rightLeg.userData.nTimes += delta;
+        leftLeg.rotateX((Math.PI/2)/foldingSpeed * delta);
+        rightLeg.rotateX((Math.PI/2)/foldingSpeed * delta);
+        */
+
+        rightLeg.userData.nTimes += delta;
+        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightLeg.rotation.x == Math.PI/2) {
+            rightLeg.userData.nTimes = foldingSpeed;
+        }
     }
 
     if (keySHolded && rightLeg.userData.nTimes > 0) { //key S/s
-        rightLeg.userData.nTimes -= 1;
-        leftLeg.rotateX(-(Math.PI/2)/foldingSpeed);
-        rightLeg.rotateX(-(Math.PI/2)/foldingSpeed);
+        /*
+        rightLeg.userData.nTimes -= delta;
+        leftLeg.rotateX(-(Math.PI/2)/foldingSpeed * delta);
+        rightLeg.rotateX(-(Math.PI/2)/foldingSpeed * delta);
+        */
+       
+        rightLeg.userData.nTimes -= delta;
+        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightLeg.rotation.x == 0) {
+            rightLeg.userData.nTimes = 0;
+        }
     }
+    
+    let movementX = 0;
+    let movementZ = 0;
     // trailer movimentation
     if(keyArrowLHolded) { //left arrow
-        trailer.translateX(-0.5);
+        movementX -= 16 * delta;
+        //trailer.translateX(movement);
     }
     if(keyArrowRHolded) { //right arrow
-        trailer.translateX(0.5);
+        movementX += 16 * delta;
+        //trailer.translateX(16 * delta);
     }
     if(keyArrowUHolded) { //up arrow
-        trailer.translateZ(-0.5);
+        movementZ -= 16 * delta;
     }
     if(keyArrowDHolded) { //down arrow
-        trailer.translateZ(0.5);
+        movementZ += 16 * delta;
+        //trailer.translateZ(16 * delta);
     }
+
+    trailer.translateX(movementX);
+    trailer.translateZ(movementZ);
+    trailer.userData.xMax += movementX;
+    trailer.userData.xMin += movementX;
+    trailer.userData.zMax += movementZ;
+    trailer.userData.zMin += movementZ;
 }
 
 function update(){
     'use strict';
-
+    let delta = clock.getDelta();
     if (keyGPressed && !keyGHolded) { //g
         keyGHolded = true;
         scene.traverse(function (node) {
@@ -526,13 +621,13 @@ function update(){
     }
 
     if (!CollisionDetected) {
-        handleMovement();
-        /*if (isTruck() && checkCollisions()) {
+        handleMovement(delta);
+        if (isTruck() && checkCollisions()) {
             CollisionDetected = true;
-        }*/
+        }
     }
     if (CollisionDetected) {
-        handleCollisions();
+        handleCollisions(delta);
     }
 }
 
