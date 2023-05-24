@@ -33,9 +33,10 @@ let keyArrowRHolded = false;
 let keyArrowUHolded = false;
 let keyArrowDHolded = false;
 
-
-// boolean to indicate if it is in truck or robot mode
-let CollisionDetected = false;
+// To know if animation should be activated
+let activeAnimation= false;
+let CollisionPreviousFrame = false;
+let CollisionCurrentFrame = false;
 
 const foldingSpeed = 2;
 const materials = [
@@ -439,14 +440,31 @@ function handleCollisions(delta){
     'use strict';
     // final x = 0; z = -12.5
     // final zMax = -12.5, xMax = 25
-    let movementX = 25 - trailer.userData.x;
-    let movementZ = -12.5 - trailer.userData.z;
+    let movementX = 25 - trailer.userData.xMax;
+    let movementZ = -12.5 - trailer.userData.zMax;
+    if (movementX == 0 && movementZ == 0) {
+        activeAnimation = false;
+        return;
+    }
+
     let direction = new THREE.Vector3(movementX, 0, movementZ);
     direction.normalize();
-    // t_total_x = movementX/16; t_total_y = movementY/16
-    trailer.translateOnAxis(direction, 16 * delta);
-    //trailer.translateX(movementX);
-    //trailer.translateZ(movementZ);
+    direction = direction.multiplyScalar(16 * delta)
+    
+    if (Math.abs(direction.x) > Math.abs(movementX)) {
+        direction.x = movementX;
+    }
+
+    if (Math.abs(direction.z) > Math.abs(movementZ)) {
+        direction.z = movementZ;
+    }
+
+    trailer.translateX(direction.x);
+    trailer.translateZ(direction.z);
+    trailer.userData.xMax += direction.x;
+    trailer.userData.xMin += direction.x;
+    trailer.userData.zMax += direction.z;
+    trailer.userData.zMin += direction.z;
 }
 
 ////////////
@@ -619,15 +637,24 @@ function update(){
             materials[i].mat.wireframe = !materials[i].mat.wireframe;
         }
     }
-
-    if (!CollisionDetected) {
+    
+    //CollisionPreviousFrame = CollisionCurrentFrame;
+    if (!activeAnimation) {
         handleMovement(delta);
+        CollisionPreviousFrame = CollisionCurrentFrame;
         if (isTruck() && checkCollisions()) {
-            CollisionDetected = true;
+            CollisionCurrentFrame = true;
+            if (!CollisionPreviousFrame && CollisionCurrentFrame) {
+                activeAnimation = true;
+            }
+        }
+        else {
+            CollisionCurrentFrame = false;
         }
     }
-    if (CollisionDetected) {
+    if (activeAnimation) {
         handleCollisions(delta);
+        // fim da animação -> activeAnimation = false;
     }
 }
 
