@@ -2,36 +2,39 @@
 /* GLOBAL VARIABLES */
 //////////////////////
 
-const frustumSize = 600;
+const FRUSTUM_SIZE = 600;
 
-const cameraInputs = [49, 50, 51, 52, 53];
-const keyCodeOffset = 49;
+const CAMERA_INPUTS = [49, 50, 51, 52, 53];
+const KEY_CODE_OFFSET = 49;
+
+const TRAILER_SPEED = 32;
+
+const IS_TRUCK = 0;
+const IS_ROBOT = 1;
+const IS_FOLDING = -1;
 
 let activeCamera, cameras, scene, renderer, clock;
 
 // switch solid colors/wireframe view
 let key6Pressed = false;
-let key6Holded = false;
-// active/deactivate axes helper
-let keyGPressed = false;
-let keyGHolded = false;
+let key6Held = false;
 // head rotation
-let keyRHolded = false;
-let keyFHolded = false;
+let keyRHeld = false;
+let keyFHeld = false;
 // arm translation
-let keyEHolded = false;
-let keyDHolded = false;
+let keyEHeld = false;
+let keyDHeld = false;
 // feet rotation
-let keyQHolded = false;
-let keyAHolded = false;
+let keyQHeld = false;
+let keyAHeld = false;
 // legs rotation
-let keyWHolded = false;
-let keySHolded = false;
+let keyWHeld = false;
+let keySHeld = false;
 // trailer slide
-let keyArrowLHolded = false;
-let keyArrowRHolded = false;
-let keyArrowUHolded = false;
-let keyArrowDHolded = false;
+let keyArrowLHeld = false;
+let keyArrowRHeld = false;
+let keyArrowUHeld = false;
+let keyArrowDHeld = false;
 
 // To know if animation should be activated
 let activeAnimation= false;
@@ -48,20 +51,17 @@ const materials = [
 
 let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot;
 let robot, trailer;
-let trailerHelper;
 
 /////////////////////
 /* CREATE SCENE(S) */
 /////////////////////
 function createScene(){
     'use strict';
-
     scene = new THREE.Scene();
-
-    scene.add(new THREE.AxesHelper(10));
 
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
+
     createRobot(0, 0, 0);
     createTrailer(0, 0, -240);
 }
@@ -79,14 +79,10 @@ function createClock(){
 
 function createCameras() {
     'use strict';
-    let frontViewCamera = createOrthogonalCamera(0, 0, 50);
-    // let frontViewCamera = createPerspectiveCamera(0, 20, 200);
-    let latViewCamera = createOrthogonalCamera(50, 0, 0);
-    // let latViewCamera = createPerspectiveCamera(100, -20, 0);
-    let topViewCamera = createOrthogonalCamera(0, 50, 0);
-    // let topViewCamera = createPerspectiveCamera(0, 100, 0);
-    let isoCameraO = createOrthogonalCamera(50, 50, 50);
-    // let isoCameraO = createPerspectiveCamera(50, 50, 50);
+    let frontViewCamera = createOrthogonalCamera(0, 0, 50, 2);
+    let latViewCamera = createOrthogonalCamera(50, 0, 0, 2);
+    let topViewCamera = createOrthogonalCamera(0, 200, 0, 1);
+    let isoCameraO = createOrthogonalCamera(50, 50, 50, 2);
     let isoCameraP = createPerspectiveCamera(100, 100, 100);
 
     cameras = [
@@ -100,14 +96,14 @@ function createCameras() {
     activeCamera = frontViewCamera;
 }
 
-function createOrthogonalCamera(x, y, z) {
+function createOrthogonalCamera(x, y, z, zoom) {
     'use strict';
     const aspect = window.innerWidth / window.innerHeight;
-    let camera = new THREE.OrthographicCamera( - 0.5 * frustumSize * aspect, 0.5 * frustumSize * aspect, frustumSize / 2, frustumSize / - 2, 1, 1000);
+    let camera = new THREE.OrthographicCamera( - 0.5 * FRUSTUM_SIZE * aspect, 0.5 * FRUSTUM_SIZE * aspect, FRUSTUM_SIZE / 2, FRUSTUM_SIZE / - 2, 1, 1000);
     camera.position.x = x;
     camera.position.y = y;
     camera.position.z = z;
-    camera.zoom = 2;
+    camera.zoom = zoom;
     camera.lookAt(scene.position);
     
     camera.updateProjectionMatrix();
@@ -162,13 +158,12 @@ function addAntenna(obj, x, y, z) {
 function addHead(obj, x, y, z) {
     'use strict';
     head = new THREE.Object3D();
-    // head is in truck mode if nTimes = 16
-    head.userData = { nTimes: 0 };
+    head.userData = { state: IS_ROBOT };
     addFace(head, 0, 8, 0);
     addEye(head, 3, 10, 8);
     addEye(head, -3, 10, 8);
-    addAntenna(head, 8+1, 12.5, 0);
-    addAntenna(head, -8-1, 12.5, 0);
+    addAntenna(head, 9, 12.5, 0);
+    addAntenna(head, -9, 12.5, 0);
 
     obj.add(head);
 
@@ -199,10 +194,10 @@ function addUpperArm(obj, x, y, z, isLeft) {
     let geometry2 = new THREE.CylinderGeometry(1.5, 1.5, 20);
     let pipe = new THREE.Mesh(geometry2, materials[2].mat);
     if (isLeft) {
-        pipe.position.set(-4-1.5, 15, 0);
+        pipe.position.set(-5.5, 15, 0);
     }
     else {
-        pipe.position.set(+4+1.5, 15, 0);
+        pipe.position.set(5.5, 15, 0);
     }
 
     // upper arm
@@ -223,7 +218,7 @@ function addLowerArm(obj, x, y, z) {
 
 function addArm(obj, arm, x, y, z, isLeft) {
     'use strict';
-    addUpperArm(arm, 0, 0, -12.5+4, isLeft);
+    addUpperArm(arm, 0, 0, -8.5, isLeft);
     addLowerArm(arm, 0, -15, 0);
 
     obj.add(arm);
@@ -235,8 +230,7 @@ function addArms(obj) {
     'use strict';
     leftArm = new THREE.Object3D();
     rightArm = new THREE.Object3D();
-    // arms are in truck mode if nTimes = 16
-    rightArm.userData = { nTimes: 0 };
+    rightArm.userData = { state: IS_ROBOT };
 
     addArm(obj, leftArm, -29, 0, 0, true);
     addArm(obj, rightArm, 29, 0, 0, false);
@@ -334,12 +328,11 @@ function addWaistToFeet(obj, x, y, z) {
 function addLegs(obj) {
     leftLeg = new THREE.Object3D();
     rightLeg = new THREE.Object3D();
-    // legs are in truck mode if nTimes = 16
-    rightLeg.userData = { nTimes: 0 };
+    rightLeg.userData = { state: IS_ROBOT };
+
     leftFoot = new THREE.Object3D();
     rightFoot = new THREE.Object3D();
-    // feet are in truck mode if nTimes = 16
-    rightFoot.userData = { nTimes: 0 };
+    rightFoot.userData = { state: IS_ROBOT };
 
     addLeg(obj, leftLeg, 1, 10, 0, 0);
     addLeg(obj, rightLeg, -1, -10, 0, 0);
@@ -372,13 +365,8 @@ function createRobot(x, y, z) {
     scene.add(robot);
 
     robot.position.set(x, y, z);
+    // Points for AABB
     robot.userData = { xMax : 28, xMin : -28, yMax : 25, yMin : -44, zMax : 14.5, zMin : -100};
-    
-    const box = new THREE.Box3( new THREE.Vector3( robot.userData.xMin, robot.userData.yMin, robot.userData.zMin ), new THREE.Vector3( robot.userData.xMax, robot.userData.yMax, robot.userData.zMax ) );
-    //box.setFromCenterAndSize( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, -172.5 ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, 0 ) );
-
-    const helper = new THREE.Box3Helper( box, 0xffff00 );
-    scene.add( helper );
 }
 
 ////////////////////////
@@ -404,22 +392,17 @@ function createTrailer(x, y, z) {
     'use strict';
     trailer = new THREE.Object3D();
 
-    addWheel(trailer, 4+17, -34, -32.5);
-    addWheel(trailer, -4-17, -34, -32.5);
-    addWheel(trailer, 4+17, -34, -57.5);
-    addWheel(trailer, -4-17, -34, -57.5);
+    addWheel(trailer, 21, -34, -32.5);
+    addWheel(trailer, -21, -34, -32.5);
+    addWheel(trailer, 21, -34, -57.5);
+    addWheel(trailer, -21, -34, -57.5);
     addContainer(trailer, 0, 0, 0);
     addConnectionPiece(trailer, 0, -22.5, 70);
 
     scene.add(trailer);
     trailer.position.set(x, y, z);
+    // Initial points for AABB
     trailer.userData = { xMax : 25, xMin : -25, yMax : 25, yMin : -44, zMax : -167.5, zMin : -307.5};
-
-    const box = new THREE.Box3( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, trailer.userData.zMin ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, trailer.userData.zMax ) );
-    //box.setFromCenterAndSize( new THREE.Vector3( trailer.userData.xMin, trailer.userData.yMin, -172.5 ), new THREE.Vector3( trailer.userData.xMax, trailer.userData.yMax, 0 ) );
-
-    trailerHelper = new THREE.Box3Helper( box, 0xffff00 );
-    scene.add( trailerHelper );
 }
 
 //////////////////////
@@ -427,8 +410,9 @@ function createTrailer(x, y, z) {
 //////////////////////
 function checkCollisions(){
     'use strict';
-    // bounding box
-    return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax && robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax && robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;
+    return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
+    robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax &&
+    robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;
 
 }
 
@@ -438,213 +422,209 @@ function checkCollisions(){
 ///////////////////////
 function handleCollisions(delta){
     'use strict';
-    // final x = 0; z = -12.5
-    // final zMax = -12.5, xMax = 25
-    let movementX = 25 - trailer.userData.xMax;
-    let movementZ = -12.5 - trailer.userData.zMax;
-    if (movementX == 0 && movementZ == 0) {
+    // Trailer's final position zMax = -12.5, xMax = 25
+    let distanceX = 25 - trailer.userData.xMax;
+    let distanceZ = -12.5 - trailer.userData.zMax;
+    if (distanceX == 0 && distanceZ == 0) {
+        // End of trailer's animation
         activeAnimation = false;
         return;
     }
-
-    let direction = new THREE.Vector3(movementX, 0, movementZ);
-    direction.normalize();
-    direction = direction.multiplyScalar(16 * delta)
-    
-    if (Math.abs(direction.x) > Math.abs(movementX)) {
-        direction.x = movementX;
+    // Calculate translationV vector
+    let translationV = new THREE.Vector3(distanceX, 0, distanceZ);
+    translationV.normalize();
+    translationV = translationV.multiplyScalar(TRAILER_SPEED * delta);
+    // Set translationV equal to distance if it goes beyond target 
+    if (Math.abs(translationV.x) > Math.abs(distanceX)) {
+        translationV.x = distanceX;
     }
 
-    if (Math.abs(direction.z) > Math.abs(movementZ)) {
-        direction.z = movementZ;
+    if (Math.abs(translationV.z) > Math.abs(distanceZ)) {
+        translationV.z = distanceZ;
     }
-
-    trailer.translateX(direction.x);
-    trailer.translateZ(direction.z);
-    trailer.userData.xMax += direction.x;
-    trailer.userData.xMin += direction.x;
-    trailer.userData.zMax += direction.z;
-    trailer.userData.zMin += direction.z;
+    // Apply translation
+    trailer.translateX(translationV.x);
+    trailer.translateZ(translationV.z);
+    updateAABBTrailer(translationV.x, translationV.z);
 }
+
+
 
 ////////////
 /* UPDATE */
 ////////////
+function updateAABBTrailer(x, z) {
+    'use strict';
+    trailer.userData.xMax += x;
+    trailer.userData.xMin += x;
+    trailer.userData.zMax += z;
+    trailer.userData.zMin += z;
+}
+
 function isTruck(){
     'use strict';
-    return head.userData.nTimes == foldingSpeed && rightArm.userData.nTimes == foldingSpeed &&
-    rightFoot.userData.nTimes == foldingSpeed && rightLeg.userData.nTimes == foldingSpeed;
+    return head.userData.state == IS_TRUCK && rightArm.userData.state == IS_TRUCK &&
+    rightFoot.userData.state == IS_TRUCK && rightLeg.userData.state == IS_TRUCK;
+}
+
+function handleHeadMovement(delta) {
+    'use strict';
+    // head rotation (max rotation = -PI rads)
+    if (keyRHeld && head.userData.state != IS_TRUCK) { //key R/r
+        // fold head
+        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x - (Math.PI/foldingSpeed * delta), -Math.PI, 0);
+        if (head.rotation.x == -Math.PI) {
+            head.userData.state = IS_TRUCK;
+        }
+        else {
+            head.userData.state = IS_FOLDING;
+        }
+    }
+    if (keyFHeld && head.userData.state != IS_ROBOT) { //key F/f
+        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + (Math.PI/foldingSpeed * delta), -Math.PI, 0);
+        if (head.rotation.x == 0) {
+            head.userData.state = IS_ROBOT;
+        }
+        else {
+            head.userData.state = IS_FOLDING;
+        }
+    }
+}
+
+function handleArmsMovement(delta) {
+    'use strict';
+    // arm translation (max translation = 8)
+    if (keyDHeld && rightArm.userData.state != IS_ROBOT) { //key D/d
+        // arms out
+        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + (8/foldingSpeed * delta), 29-8, 29);
+        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - (8/foldingSpeed * delta), -29, -29+8);
+        if (rightArm.position.x == 29) {
+            rightArm.userData.state = IS_ROBOT;
+        }
+        else {
+            rightArm.userData.state = IS_FOLDING;
+        }
+    }
+    if (keyEHeld && rightArm.userData.state != IS_TRUCK) { //key E/e
+        // arms in
+        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x - (8/foldingSpeed * delta), 29-8, 29);
+        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x + (8/foldingSpeed * delta), -29, -29+8);
+        if (rightArm.position.x == 29-8) {
+            rightArm.userData.state = IS_TRUCK;
+        }
+        else {
+            rightArm.userData.state = IS_FOLDING;
+        }
+    }
+}
+
+function handleFeetMovement(delta) {
+    'use strict';
+    // feet rotation (max rotation = -PI rads)
+    if (keyQHeld && rightFoot.userData.state != IS_TRUCK) { //key Q\q
+        // fold feet      
+        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightFoot.rotation.x == Math.PI/2) {
+            rightFoot.userData.state = IS_TRUCK;
+        }
+        else {
+            rightFoot.userData.state = IS_FOLDING;
+        }
+    }
+
+    if (keyAHeld && rightFoot.userData.state != IS_ROBOT) { //key A/a
+        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightFoot.rotation.x == 0) {
+            rightFoot.userData.state = IS_ROBOT;
+        }
+        else {
+            rightFoot.userData.state = IS_FOLDING;
+        }
+    }
+}
+
+function handleLegsMovement(delta) {
+    'use strict';
+    // legs rotation (max rotation = -PI rads)
+    if (keyWHeld && rightLeg.userData.state != IS_TRUCK) { //key W\w
+        // fold legs
+        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightLeg.rotation.x == Math.PI/2) {
+            rightLeg.userData.state = IS_TRUCK;
+        }
+        else {
+            rightLeg.userData.state = IS_FOLDING;
+        }
+    }
+
+    if (keySHeld && rightLeg.userData.state != IS_ROBOT) { //key S/s
+        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
+        if (rightLeg.rotation.x == 0) {
+            rightLeg.userData.state = IS_ROBOT;
+        }
+        else {
+            rightLeg.userData.state = IS_FOLDING;
+        }
+    }
+}
+
+function handleTrailerMovement(delta) {
+    'use strict';
+    let movementX = 0;
+    let movementZ = 0;
+    // trailer movement
+    if(keyArrowLHeld) { //left arrow
+        movementX -= 1;
+    }
+    if(keyArrowRHeld) { //right arrow
+        movementX += 1;
+    }
+    if(keyArrowUHeld) { //up arrow
+        movementZ -= 1;
+    }
+    if(keyArrowDHeld) { //down arrow
+        movementZ += 1;
+    }
+    if (movementX != 0 || movementZ != 0) {
+        let translationV = new THREE.Vector3(movementX, 0, movementZ);
+        translationV.normalize();
+        translationV = translationV.multiplyScalar(TRAILER_SPEED * delta);
+        trailer.translateX(translationV.x);
+        trailer.translateZ(translationV.z);
+        updateAABBTrailer(translationV.x, translationV.z);
+    }
 }
 
 function handleMovement(delta) {
     'use strict';
-    // head rotation (max rotation = -PI rads)
-    if (keyRHolded && head.userData.nTimes < foldingSpeed) { //key R/r
-        // fold head
-        /*
-        let delta_head = head.userData.nTimes + delta > foldingSpeed ? foldingSpeed - head.userData.nTimes : delta;
-        head.userData.nTimes += delta_head;
-        head.rotateX(-Math.PI/foldingSpeed * delta_head);
-        */
-        head.userData.nTimes += delta;
-        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x - (Math.PI/foldingSpeed * delta), -Math.PI, 0);
-        if (head.rotation.x == -Math.PI) {
-            head.userData.nTimes = foldingSpeed;
-        }
-    }
-
-    if (keyFHolded && head.userData.nTimes > 0) { //key F/f
-        /*head.userData.nTimes -= delta;
-        head.rotateX(Math.PI/foldingSpeed * delta);*/
-        head.userData.nTimes -= delta;
-        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + (Math.PI/foldingSpeed * delta), -Math.PI, 0);
-        if (head.rotation.x == 0) {
-            head.userData.nTimes = 0;
-        }
-        
-    }
-    // arm translation (max translation = 8)
-    if (keyDHolded && rightArm.userData.nTimes > 0) { //key D/d
-        // arms out
-        /*rightArm.userData.nTimes -= delta;
-        rightArm.translateX(0.5 * delta);
-        leftArm.translateX(-0.5 * delta);*/
-        rightArm.userData.nTimes -= delta;
-        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + (8/foldingSpeed * delta), 29-8, 29);
-        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - (8/foldingSpeed * delta), -29, -29+8);
-        if (rightArm.position.x == 29) {
-            rightArm.userData.nTimes = 0;
-        }
-    }
-
-    if (keyEHolded && rightArm.userData.nTimes < foldingSpeed) { //key E/e
-        // arms in
-        /*rightArm.userData.nTimes += delta;
-        rightArm.translateX(-0.5 * delta);
-        leftArm.translateX(0.5 * delta);*/
-
-        rightArm.userData.nTimes += delta;
-        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x - (8/foldingSpeed * delta), 29-8, 29);
-        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x + (8/foldingSpeed * delta), -29, -29+8);
-        if (rightArm.position.x == 29-8) {
-            rightArm.userData.nTimes = foldingSpeed;
-        }
-    }
-    // feet rotation (max rotation = -PI rads)
-    if (keyQHolded && rightFoot.userData.nTimes < foldingSpeed) { //key Q\q
-        // fold feet
-        /*
-        rightFoot.userData.nTimes += delta;
-        leftFoot.rotateX((Math.PI/2)/foldingSpeed * delta);
-        rightFoot.rotateX((Math.PI/2)/foldingSpeed * delta);
-        */
-       
-        rightFoot.userData.nTimes += delta;
-        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightFoot.rotation.x == Math.PI/2) {
-            rightFoot.userData.nTimes = foldingSpeed;
-        }
-    }
-
-    if (keyAHolded && rightFoot.userData.nTimes > 0) { //key A/a
-        /*
-        rightFoot.userData.nTimes -= delta;
-        leftFoot.rotateX(-(Math.PI/2)/foldingSpeed * delta);
-        rightFoot.rotateX(-(Math.PI/2)/foldingSpeed * delta);
-        */
-       
-        rightFoot.userData.nTimes -= delta;
-        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightFoot.rotation.x == 0) {
-            rightFoot.userData.nTimes = 0;
-        }
-    }
-    // legs rotation (max rotation = -PI rads)
-    if (keyWHolded && rightLeg.userData.nTimes < foldingSpeed) { //key W\w
-        // fold feet
-        /*
-        rightLeg.userData.nTimes += delta;
-        leftLeg.rotateX((Math.PI/2)/foldingSpeed * delta);
-        rightLeg.rotateX((Math.PI/2)/foldingSpeed * delta);
-        */
-
-        rightLeg.userData.nTimes += delta;
-        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightLeg.rotation.x == Math.PI/2) {
-            rightLeg.userData.nTimes = foldingSpeed;
-        }
-    }
-
-    if (keySHolded && rightLeg.userData.nTimes > 0) { //key S/s
-        /*
-        rightLeg.userData.nTimes -= delta;
-        leftLeg.rotateX(-(Math.PI/2)/foldingSpeed * delta);
-        rightLeg.rotateX(-(Math.PI/2)/foldingSpeed * delta);
-        */
-       
-        rightLeg.userData.nTimes -= delta;
-        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightLeg.rotation.x == 0) {
-            rightLeg.userData.nTimes = 0;
-        }
-    }
-    
-    let movementX = 0;
-    let movementZ = 0;
-    // trailer movimentation
-    if(keyArrowLHolded) { //left arrow
-        movementX -= 16 * delta;
-        //trailer.translateX(movement);
-    }
-    if(keyArrowRHolded) { //right arrow
-        movementX += 16 * delta;
-        //trailer.translateX(16 * delta);
-    }
-    if(keyArrowUHolded) { //up arrow
-        movementZ -= 16 * delta;
-    }
-    if(keyArrowDHolded) { //down arrow
-        movementZ += 16 * delta;
-        //trailer.translateZ(16 * delta);
-    }
-
-    trailer.translateX(movementX);
-    trailer.translateZ(movementZ);
-    trailer.userData.xMax += movementX;
-    trailer.userData.xMin += movementX;
-    trailer.userData.zMax += movementZ;
-    trailer.userData.zMin += movementZ;
+    handleHeadMovement(delta);
+    handleArmsMovement(delta);
+    handleFeetMovement(delta);
+    handleLegsMovement(delta);
+    handleTrailerMovement(delta);
 }
 
 function update(){
     'use strict';
     let delta = clock.getDelta();
-    if (keyGPressed && !keyGHolded) { //g
-        keyGHolded = true;
-        scene.traverse(function (node) {
-            if (node instanceof THREE.AxesHelper) {
-                node.visible = !node.visible;
-            }
-        });
-    }
-    if (key6Pressed && !key6Holded) { //key 6
-        key6Holded = true;
+    if (key6Pressed && !key6Held) { //key 6
+        key6Held = true;
         for (let i=0; i < 4; i++) {
             materials[i].mat.wireframe = !materials[i].mat.wireframe;
         }
     }
     
-    //CollisionPreviousFrame = CollisionCurrentFrame;
     if (!activeAnimation) {
         handleMovement(delta);
         CollisionPreviousFrame = CollisionCurrentFrame;
         if (isTruck() && checkCollisions()) {
             CollisionCurrentFrame = true;
             if (!CollisionPreviousFrame && CollisionCurrentFrame) {
+                // only activate animation if there was no collision in previous frame
                 activeAnimation = true;
             }
         }
@@ -654,7 +634,6 @@ function update(){
     }
     if (activeAnimation) {
         handleCollisions(delta);
-        // fim da animação -> activeAnimation = false;
     }
 }
 
@@ -711,10 +690,10 @@ function onResize() {
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
         for (let i = 0; i < 4; i++) {
-            cameras[i].cam.left = - 0.5 * frustumSize * aspect;
-            cameras[i].cam.right = 0.5 * frustumSize * aspect;
-            cameras[i].cam.top = frustumSize / 2;
-            cameras[i].cam.bottom = - frustumSize / 2;
+            cameras[i].cam.left = - 0.5 * FRUSTUM_SIZE * aspect;
+            cameras[i].cam.right = 0.5 * FRUSTUM_SIZE * aspect;
+            cameras[i].cam.top = FRUSTUM_SIZE / 2;
+            cameras[i].cam.bottom = - FRUSTUM_SIZE / 2;
             cameras[i].cam.updateProjectionMatrix();
 
         }
@@ -728,56 +707,52 @@ function onResize() {
 ///////////////////////
 function onKeyDown(e) {
     'use strict';
-
-    if (e.keyCode == 71) { //g (remove)
-        keyGPressed = true;
-    }
-    if (cameraInputs.includes(e.keyCode)) { //keys 1 to 5
-        activeCamera = cameras[e.keyCode-keyCodeOffset].cam;
+    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
+        activeCamera = cameras[e.keyCode-KEY_CODE_OFFSET].cam;
     }
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = true;
     }
     // head rotation
     if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHolded = true;
+        keyRHeld = true;
     }
     if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHolded = true;
+        keyFHeld = true;
     }
     // arm translation
     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHolded = true;
+        keyDHeld = true;
     }
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHolded = true;
+        keyEHeld = true;
     }
     // feet rotation
     if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHolded = true;
+        keyQHeld = true;
     }
     if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHolded = true;
+        keyAHeld = true;
     }
     // leg rotation
     if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHolded = true;
+        keyWHeld = true;
     }
     if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
-        keySHolded = true;
+        keySHeld = true;
     }
     // trailer slide
     if (e.keyCode == 37) { //key arrow left
-        keyArrowLHolded = true;
+        keyArrowLHeld = true;
     }
     if (e.keyCode == 39) { //key arrow right
-        keyArrowRHolded = true;
+        keyArrowRHeld = true;
     }
     if (e.keyCode == 38) { //key arrow up
-        keyArrowUHolded = true;
+        keyArrowUHeld = true;
     }
     if (e.keyCode == 40) { //key arrow down
-        keyArrowDHolded = true;
+        keyArrowDHeld = true;
     }
 }
 
@@ -786,54 +761,49 @@ function onKeyDown(e) {
 ///////////////////////
 function onKeyUp(e){
     'use strict';
-
-    if (e.keyCode == 71) { //key g (remove)
-        keyGPressed = false;
-        keyGHolded = false;
-    }
     if (e.keyCode == 54) { //key 6
         key6Pressed = false;
-        key6Holded = false;
+        key6Held = false;
     }
     // head rotation
     if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHolded = false;
+        keyRHeld = false;
     }
     if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHolded = false;
+        keyFHeld = false;
     }
     // arm translation
     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHolded = false;
+        keyDHeld = false;
     }
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHolded = false;
+        keyEHeld = false;
     }
     // feet rotation
     if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHolded = false;
+        keyQHeld = false;
     }
     if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHolded = false;
+        keyAHeld = false;
     }
     // leg rotation
     if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHolded = false;
+        keyWHeld = false;
     }
     if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
-        keySHolded = false;
+        keySHeld = false;
     }
     // trailer slide
     if (e.keyCode == 37) { //key arrow left
-        keyArrowLHolded = false;
+        keyArrowLHeld = false;
     }
     if (e.keyCode == 39) { //key arrow right
-        keyArrowRHolded = false;
+        keyArrowRHeld = false;
     }
     if (e.keyCode == 38) { //key arrow up
-        keyArrowUHolded = false;
+        keyArrowUHeld = false;
     }
     if (e.keyCode == 40) { //key arrow down
-        keyArrowDHolded = false;
+        keyArrowDHeld = false;
     }
 }
