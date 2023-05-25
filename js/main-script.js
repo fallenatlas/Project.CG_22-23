@@ -13,8 +13,16 @@ const IS_TRUCK = 0;
 const IS_ROBOT = 1;
 const IS_FOLDING = -1;
 
-let activeCamera, cameras, scene, renderer, clock;
+const foldingSpeed = 2;
+const materials = [
+    { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'red', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'grey', wireframe: true }) },
+    { mat:  new THREE.MeshBasicMaterial({ color: 'darkblue', wireframe: true }) },
+]
 
+// cameras
+let keyCamerasPressed = [false, false, false, false, false];
 // switch solid colors/wireframe view
 let key6Pressed = false;
 let key6Held = false;
@@ -41,15 +49,8 @@ let activeAnimation= false;
 let CollisionPreviousFrame = false;
 let CollisionCurrentFrame = false;
 
-const foldingSpeed = 2;
-const materials = [
-    { mat:  new THREE.MeshBasicMaterial({ color: 'black', wireframe: true }) },
-    { mat:  new THREE.MeshBasicMaterial({ color: 'red', wireframe: true }) },
-    { mat:  new THREE.MeshBasicMaterial({ color: 'grey', wireframe: true }) },
-    { mat:  new THREE.MeshBasicMaterial({ color: 'darkblue', wireframe: true }) },
-]
-
-let head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot;
+let activeCamera, cameras, scene, renderer, clock;
+let head, leftArm, rightArm, legs, feet;
 let robot, trailer;
 
 /////////////////////
@@ -255,16 +256,14 @@ function addWaist(obj, x, y, z) {
     obj.add(mesh);
 }
 
-function addLeg(obj, leg, side, x, y, z) {
+function addLeg(obj, side, x, y, z) {
     'use strict'
+    let leg = new THREE.Object3D();
     addTopLeg(leg, 0, -12.5, -3.5);
     addBottomLeg(leg, 0, -25-25, -0);
     addWheel(leg, (7 + 4) * side, -25-10-5, 0);
     addWheel(leg, (7 + 4) * side, -25-10-5-5-10-10, 0);
 
-    if (side == 1) { addFoot(leg, rightFoot, 0, -25-50, -7); }
-    else { addFoot(leg, leftFoot, 0, -25-50, -7); }
-    
     leg.position.set(x, y, z);
 
     obj.add(leg);
@@ -295,8 +294,9 @@ function addBottomLeg(obj, x, y, z) {
     obj.add(mesh);
 }
 
-function addFoot(obj, foot, x, y, z) {
+function addFoot(obj, x, y, z) {
     'use strict'
+    let foot = new THREE.Object3D();
     addFootBase(foot, 0, 7, 12.5);
 
     foot.position.set(x, y, z);
@@ -316,7 +316,7 @@ function addWaistToFeet(obj, x, y, z) {
     'use strict'
     let waistToFeet = new THREE.Object3D();
     addWaist(waistToFeet, 0, 0, 12.5+1);
-    addWheel(waistToFeet, 4+17, 0, 0); // objeto novo para a roda e rodar esse??
+    addWheel(waistToFeet, 4+17, 0, 0);
     addWheel(waistToFeet, -4-17, 0, 0);
     addLegs(waistToFeet);
 
@@ -326,16 +326,21 @@ function addWaistToFeet(obj, x, y, z) {
 }
 
 function addLegs(obj) {
-    leftLeg = new THREE.Object3D();
-    rightLeg = new THREE.Object3D();
-    rightLeg.userData = { state: IS_ROBOT };
+    legs = new THREE.Object3D();
+    legs.userData = { state: IS_ROBOT };
 
-    leftFoot = new THREE.Object3D();
-    rightFoot = new THREE.Object3D();
-    rightFoot.userData = { state: IS_ROBOT };
+    feet = new THREE.Object3D();
+    feet.userData = { state: IS_ROBOT };
 
-    addLeg(obj, leftLeg, 1, 10, 0, 0);
-    addLeg(obj, rightLeg, -1, -10, 0, 0);
+    addLeg(legs, 1, 10, 0, 0);
+    addLeg(legs, -1, -10, 0, 0);
+
+    addFoot(feet, 10, 0, 0);
+    addFoot(feet, -10, 0, 0);
+
+    feet.position.set(0, -25-50, -7);
+    legs.add(feet);
+    obj.add(legs);
 }
 
 function addAbdomenToFeet(obj, x, y, z) {
@@ -366,7 +371,7 @@ function createRobot(x, y, z) {
 
     robot.position.set(x, y, z);
     // Points for AABB
-    robot.userData = { xMax : 28, xMin : -28, yMax : 25, yMin : -44, zMax : 14.5, zMin : -100};
+    robot.userData = { xMax : 28, xMin : -28, zMax : 14.5, zMin : -100};
 }
 
 ////////////////////////
@@ -375,7 +380,7 @@ function createRobot(x, y, z) {
 function addContainer(obj, x, y, z) {
     'use strict';    
     let geometry = new THREE.BoxGeometry(34, 50, 135);
-    let mesh = new THREE.Mesh(geometry, materials[3].mat);
+    let mesh = new THREE.Mesh(geometry, materials[2].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -383,7 +388,7 @@ function addContainer(obj, x, y, z) {
 function addConnectionPiece(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.BoxGeometry(5, 5, 5);
-    let mesh = new THREE.Mesh(geometry, materials[2].mat);
+    let mesh = new THREE.Mesh(geometry, materials[1].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -402,7 +407,7 @@ function createTrailer(x, y, z) {
     scene.add(trailer);
     trailer.position.set(x, y, z);
     // Initial points for AABB
-    trailer.userData = { xMax : 25, xMin : -25, yMax : 25, yMin : -44, zMax : -167.5, zMin : -307.5};
+    trailer.userData = { xMax : 25, xMin : -25, zMax : -167.5, zMin : -307.5};
 }
 
 //////////////////////
@@ -411,7 +416,6 @@ function createTrailer(x, y, z) {
 function checkCollisions(){
     'use strict';
     return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
-    robot.userData.yMax > trailer.userData.yMin && robot.userData.yMin < trailer.userData.yMax &&
     robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;
 
 }
@@ -430,22 +434,21 @@ function handleCollisions(delta){
         activeAnimation = false;
         return;
     }
-    // Calculate translationV vector
-    let translationV = new THREE.Vector3(distanceX, 0, distanceZ);
-    translationV.normalize();
-    translationV = translationV.multiplyScalar(TRAILER_SPEED * delta);
-    // Set translationV equal to distance if it goes beyond target 
-    if (Math.abs(translationV.x) > Math.abs(distanceX)) {
-        translationV.x = distanceX;
+    // Calculate translation vector
+    let translation = new THREE.Vector3(distanceX, 0, distanceZ);
+    translation.normalize();
+    translation = translation.multiplyScalar(TRAILER_SPEED * delta);
+    // Set translation equal to distance if it goes beyond target 
+    if (Math.abs(translation.x) > Math.abs(distanceX)) {
+        translation.x = distanceX;
     }
 
-    if (Math.abs(translationV.z) > Math.abs(distanceZ)) {
-        translationV.z = distanceZ;
+    if (Math.abs(translation.z) > Math.abs(distanceZ)) {
+        translation.z = distanceZ;
     }
     // Apply translation
-    trailer.translateX(translationV.x);
-    trailer.translateZ(translationV.z);
-    updateAABBTrailer(translationV.x, translationV.z);
+    trailer.position.add(translation);
+    updateAABBTrailer(translation.x, translation.z);
 }
 
 
@@ -464,138 +467,147 @@ function updateAABBTrailer(x, z) {
 function isTruck(){
     'use strict';
     return head.userData.state == IS_TRUCK && rightArm.userData.state == IS_TRUCK &&
-    rightFoot.userData.state == IS_TRUCK && rightLeg.userData.state == IS_TRUCK;
+    feet.userData.state == IS_TRUCK && legs.userData.state == IS_TRUCK;
 }
 
 function handleHeadMovement(delta) {
     'use strict';
     // head rotation (max rotation = -PI rads)
+    let rotation = new THREE.Vector3(0, 0, 0);
     if (keyRHeld && head.userData.state != IS_TRUCK) { //key R/r
         // fold head
-        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x - (Math.PI/foldingSpeed * delta), -Math.PI, 0);
-        if (head.rotation.x == -Math.PI) {
-            head.userData.state = IS_TRUCK;
-        }
-        else {
-            head.userData.state = IS_FOLDING;
-        }
+        rotation.x -= Math.PI/foldingSpeed * delta;
     }
     if (keyFHeld && head.userData.state != IS_ROBOT) { //key F/f
-        head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + (Math.PI/foldingSpeed * delta), -Math.PI, 0);
-        if (head.rotation.x == 0) {
-            head.userData.state = IS_ROBOT;
-        }
-        else {
-            head.userData.state = IS_FOLDING;
-        }
+        rotation.x += Math.PI/foldingSpeed * delta;
+    }
+    
+    if (rotation.x == 0) {
+        return;
+    }
+    head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + rotation.x, -Math.PI, 0);
+    
+    if (head.rotation.x == -Math.PI) {
+        head.userData.state = IS_TRUCK;
+    }
+    else if (head.rotation.x == 0) {
+        head.userData.state = IS_ROBOT;
+    }
+    else {
+        head.userData.state = IS_FOLDING;
     }
 }
 
 function handleArmsMovement(delta) {
     'use strict';
     // arm translation (max translation = 8)
+    let translation = new THREE.Vector3(0, 0, 0);
     if (keyDHeld && rightArm.userData.state != IS_ROBOT) { //key D/d
         // arms out
-        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + (8/foldingSpeed * delta), 29-8, 29);
-        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - (8/foldingSpeed * delta), -29, -29+8);
-        if (rightArm.position.x == 29) {
-            rightArm.userData.state = IS_ROBOT;
-        }
-        else {
-            rightArm.userData.state = IS_FOLDING;
-        }
+        translation.x += 8/foldingSpeed * delta;
     }
     if (keyEHeld && rightArm.userData.state != IS_TRUCK) { //key E/e
         // arms in
-        rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x - (8/foldingSpeed * delta), 29-8, 29);
-        leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x + (8/foldingSpeed * delta), -29, -29+8);
-        if (rightArm.position.x == 29-8) {
-            rightArm.userData.state = IS_TRUCK;
-        }
-        else {
-            rightArm.userData.state = IS_FOLDING;
-        }
+        translation.x -= 8/foldingSpeed * delta;
+    }
+    if (translation.x == 0) {
+        return;
+    }
+
+    rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + translation.x, 29-8, 29);
+    leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - translation.x, -29, -29+8);
+        
+
+    if (rightArm.position.x == 29) {
+        rightArm.userData.state = IS_ROBOT;
+    }
+    else if (rightArm.position.x == 29-8) {
+        rightArm.userData.state = IS_TRUCK;
+    }
+    else {
+        rightArm.userData.state = IS_FOLDING;
     }
 }
 
 function handleFeetMovement(delta) {
     'use strict';
     // feet rotation (max rotation = -PI rads)
-    if (keyQHeld && rightFoot.userData.state != IS_TRUCK) { //key Q\q
+    let rotation = new THREE.Vector3(0, 0, 0);
+    if (keyQHeld && feet.userData.state != IS_TRUCK) { //key Q\q
         // fold feet      
-        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightFoot.rotation.x == Math.PI/2) {
-            rightFoot.userData.state = IS_TRUCK;
-        }
-        else {
-            rightFoot.userData.state = IS_FOLDING;
-        }
+        rotation.x += (Math.PI/2)/foldingSpeed * delta;
     }
 
-    if (keyAHeld && rightFoot.userData.state != IS_ROBOT) { //key A/a
-        leftFoot.rotation.x = THREE.MathUtils.clamp(leftFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightFoot.rotation.x = THREE.MathUtils.clamp(rightFoot.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightFoot.rotation.x == 0) {
-            rightFoot.userData.state = IS_ROBOT;
-        }
-        else {
-            rightFoot.userData.state = IS_FOLDING;
-        }
+    if (keyAHeld && feet.userData.state != IS_ROBOT) { //key A/a
+        rotation.x -= (Math.PI/2)/foldingSpeed * delta;
+    }
+
+    if (rotation.x == 0) {
+        return;
+    }
+    feet.rotation.x = THREE.MathUtils.clamp(feet.rotation.x + rotation.x, 0, Math.PI/2);
+    
+    if (feet.rotation.x == Math.PI/2) {
+        feet.userData.state = IS_TRUCK;
+    }
+    else if (feet.rotation.x == 0) {
+        feet.userData.state = IS_ROBOT;
+    }
+    else {
+        feet.userData.state = IS_FOLDING;
     }
 }
 
 function handleLegsMovement(delta) {
     'use strict';
     // legs rotation (max rotation = -PI rads)
-    if (keyWHeld && rightLeg.userData.state != IS_TRUCK) { //key W\w
+    let rotation = new THREE.Vector3(0, 0, 0);
+    if (keyWHeld && legs.userData.state != IS_TRUCK) { //key W\w
         // fold legs
-        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x + ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightLeg.rotation.x == Math.PI/2) {
-            rightLeg.userData.state = IS_TRUCK;
-        }
-        else {
-            rightLeg.userData.state = IS_FOLDING;
-        }
+        rotation.x += (Math.PI/2)/foldingSpeed * delta;
     }
 
-    if (keySHeld && rightLeg.userData.state != IS_ROBOT) { //key S/s
-        leftLeg.rotation.x = THREE.MathUtils.clamp(leftLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        rightLeg.rotation.x = THREE.MathUtils.clamp(rightLeg.rotation.x - ((Math.PI/2)/foldingSpeed * delta), 0, Math.PI/2);
-        if (rightLeg.rotation.x == 0) {
-            rightLeg.userData.state = IS_ROBOT;
-        }
-        else {
-            rightLeg.userData.state = IS_FOLDING;
-        }
+    if (keySHeld && legs.userData.state != IS_ROBOT) { //key S/s
+        rotation.x -= (Math.PI/2)/foldingSpeed * delta;
+    }
+    if (rotation.x == 0) {
+        return;
+    }
+    
+    legs.rotation.x = THREE.MathUtils.clamp(legs.rotation.x + rotation.x, 0, Math.PI/2);
+
+    if (legs.rotation.x == Math.PI/2) {
+        legs.userData.state = IS_TRUCK;
+    }
+    else if (legs.rotation.x == 0) {
+        legs.userData.state = IS_ROBOT;
+    }
+    else {
+        legs.userData.state = IS_FOLDING;
     }
 }
 
 function handleTrailerMovement(delta) {
     'use strict';
-    let movementX = 0;
-    let movementZ = 0;
+    let translation = new THREE.Vector3(0, 0, 0);
     // trailer movement
     if(keyArrowLHeld) { //left arrow
-        movementX -= 1;
+        translation.x -= 1;
     }
     if(keyArrowRHeld) { //right arrow
-        movementX += 1;
+        translation.x += 1;
     }
     if(keyArrowUHeld) { //up arrow
-        movementZ -= 1;
+        translation.z -= 1;
     }
     if(keyArrowDHeld) { //down arrow
-        movementZ += 1;
+        translation.z += 1;
     }
-    if (movementX != 0 || movementZ != 0) {
-        let translationV = new THREE.Vector3(movementX, 0, movementZ);
-        translationV.normalize();
-        translationV = translationV.multiplyScalar(TRAILER_SPEED * delta);
-        trailer.translateX(translationV.x);
-        trailer.translateZ(translationV.z);
-        updateAABBTrailer(translationV.x, translationV.z);
+    if (translation.x != 0 || translation.z != 0) {
+        translation.normalize();
+        translation = translation.multiplyScalar(TRAILER_SPEED * delta);
+        trailer.position.add(translation);
+        updateAABBTrailer(translation.x, translation.z);
     }
 }
 
@@ -611,6 +623,13 @@ function handleMovement(delta) {
 function update(){
     'use strict';
     let delta = clock.getDelta();
+
+    for(let i=0; i<5; i++) {
+        if (keyCamerasPressed[i]) {
+            activeCamera = cameras[i].cam;
+        }
+    }
+
     if (key6Pressed && !key6Held) { //key 6
         key6Held = true;
         for (let i=0; i < 4; i++) {
@@ -642,7 +661,6 @@ function update(){
 /////////////
 function render() {
     'use strict';
-    //renderer.clear();
     renderer.render(scene, activeCamera);
 }
 
@@ -708,8 +726,9 @@ function onResize() {
 function onKeyDown(e) {
     'use strict';
     if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
-        activeCamera = cameras[e.keyCode-KEY_CODE_OFFSET].cam;
+        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = true;
     }
+
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = true;
     }
@@ -761,6 +780,10 @@ function onKeyDown(e) {
 ///////////////////////
 function onKeyUp(e){
     'use strict';
+    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
+        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
+    }
+
     if (e.keyCode == 54) { //key 6
         key6Pressed = false;
         key6Held = false;
