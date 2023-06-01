@@ -45,7 +45,7 @@ let keyArrowRHeld = false;
 let keyArrowUHeld = false;
 let keyArrowDHeld = false;
 
-let activeCamera, cameras, scene, renderer, clock;
+let activeCamera, cameras, scene, scene1, renderer, clock;
 let ovni;
 
 const skyColors = [];
@@ -75,7 +75,7 @@ let backgroundGeometry1, backgroundGeometry2, backgroundMaterial;
 /////////////////////
 /* CREATE SCENE(S) */
 /////////////////////
-function createScene(){
+function createTextureScene(){
     'use strict';
     scene = new THREE.Scene();
 
@@ -84,6 +84,16 @@ function createScene(){
     generateFlowerFieldTexture();
     //createRobot(0, 0, 0);
     //createTrailer(0, 0, -240);
+}
+
+function createScene() {
+    'use strict';
+    scene1 = new THREE.Scene();
+    createField(0,0,0);
+    //createSkydome(0,0,0);
+    //createOVNI(0, 50, 0);
+    //createHouse();
+    //create
 }
 
 /////////////////////
@@ -151,10 +161,16 @@ function initBackground() {
 }
 
 function generateSkyboxTexture() {
+    // Create a different scene to hold our buffer objects 
+    let skyScene = new THREE.Scene();
+    // Create the texture that will store our result 
+    let skyTexture = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter});
+
+
     backgroundGeometry1.setAttribute( 'color', new THREE.Float32BufferAttribute( skyColors, 3 ) );
     backgroundGeometry1.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
     let mesh = new THREE.Mesh( backgroundGeometry1, backgroundMaterial );
-    scene.add( mesh );
+    skyScene.add( mesh );
     addStars();
 }
 
@@ -226,6 +242,32 @@ function createPerspectiveCamera(x, y, z, lookat) {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 
+function createField(x, y, z) {
+    'use strict';
+    const geometry = new THREE.PlaneGeometry( 500, 500 );
+    const loader = new THREE.TextureLoader();
+    const displacement = loader.load('heightmap.png');
+    const material = new THREE.MeshStandardMaterial({
+    displacementMap: displacement,
+    displacementScale: 1,
+    /*map: bufferTexture*/
+    });
+
+    const plane = new THREE.Mesh( geometry, material );
+    plane.position.set(x, y, z);
+    scene1.add( plane );
+}
+
+function createSkydome(x, y, z) {
+    'use strict';
+    const geometry = new THREE.SphereGeometry( 500 );
+    const material = new THREE.MeshStandardMaterial({ map: bufferTexture });
+
+    const skydome = new THREE.Mesh( geometry, material );
+    skydome.position.set(x, y, z);
+    scene1.add( plane );
+}
+
 ////////////
 /* UPDATE */
 ////////////
@@ -292,6 +334,9 @@ function update(){
 /////////////
 function render() {
     'use strict';
+	// Render onto our off-screen texture 
+	renderer.render(bufferScene, textureCamera, skyTexture);
+
     renderer.render(scene, activeCamera);
 }
 
@@ -307,6 +352,7 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    createTextureScene();
     createScene();
     createClock();
     createCameras();
