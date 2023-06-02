@@ -143,7 +143,7 @@ function addEye(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry(1.5, 1.5, 1);
     let mesh = new THREE.Mesh(geometry, materials[0].mat);
-    mesh.rotateX(Math.PI / 2);
+    mesh.rotateX(Math.PI / 2); //meter deitado
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -193,7 +193,7 @@ function addUpperArm(obj, x, y, z, isLeft) {
     
     // pipe
     let geometry2 = new THREE.CylinderGeometry(1.5, 1.5, 20);
-    let pipe = new THREE.Mesh(geometry2, materials[2].mat);
+    let pipe = new THREE.Mesh(geometry2, materials[2].mat); 
     if (isLeft) {
         pipe.position.set(-5.5, 15, 0);
     }
@@ -209,7 +209,7 @@ function addUpperArm(obj, x, y, z, isLeft) {
     obj.add(upperArm);
 }
 
-function addLowerArm(obj, x, y, z) {
+function addLowerArm(obj, x, y, z) { //antebraco
     'use strict';
     let geometry = new THREE.BoxGeometry(8, 8, 25);
     let mesh = new THREE.Mesh(geometry, materials[3].mat);
@@ -219,7 +219,7 @@ function addLowerArm(obj, x, y, z) {
 
 function addArm(obj, arm, x, y, z, isLeft) {
     'use strict';
-    addUpperArm(arm, 0, 0, -8.5, isLeft);
+    addUpperArm(arm, 0, 0, -8.5, isLeft); //DUVIDA
     addLowerArm(arm, 0, -15, 0);
 
     obj.add(arm);
@@ -273,7 +273,7 @@ function addWheel(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry( 10, 10, 8, 32 ); 
     let mesh = new THREE.Mesh(geometry, materials[0].mat);
-    mesh.rotateZ(Math.PI / 2);
+    mesh.rotateZ(Math.PI / 2);  //rodar para estar virados com o lateral a nos 
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -316,7 +316,7 @@ function addWaistToFeet(obj, x, y, z) {
     'use strict'
     let waistToFeet = new THREE.Object3D();
     addWaist(waistToFeet, 0, 0, 12.5+1);
-    addWheel(waistToFeet, 4+17, 0, 0);
+    addWheel(waistToFeet, 4+17, 0, 0); //4?
     addWheel(waistToFeet, -4-17, 0, 0);
     addLegs(waistToFeet);
 
@@ -417,9 +417,7 @@ function checkCollisions(){
     'use strict';
     return robot.userData.xMax > trailer.userData.xMin && robot.userData.xMin < trailer.userData.xMax &&
     robot.userData.zMax > trailer.userData.zMin && robot.userData.zMin < trailer.userData.zMax;
-
 }
-
 
 ///////////////////////
 /* HANDLE COLLISIONS */
@@ -435,7 +433,7 @@ function handleCollisions(delta){
         return;
     }
     // Calculate translation vector
-    let translation = new THREE.Vector3(distanceX, 0, distanceZ);
+    let translation = new THREE.Vector3(distanceX, 0, distanceZ); //scale de cada param do vector3
     translation.normalize();
     translation = translation.multiplyScalar(TRAILER_SPEED * delta);
     // Set translation equal to distance if it goes beyond target 
@@ -451,8 +449,6 @@ function handleCollisions(delta){
     updateAABBTrailer(translation.x, translation.z);
 }
 
-
-
 ////////////
 /* UPDATE */
 ////////////
@@ -464,12 +460,13 @@ function updateAABBTrailer(x, z) {
     trailer.userData.zMin += z;
 }
 
-function isTruck(){
+function isTruck() {
     'use strict';
     return head.userData.state == IS_TRUCK && rightArm.userData.state == IS_TRUCK &&
     feet.userData.state == IS_TRUCK && legs.userData.state == IS_TRUCK;
 }
 
+//d. e ‘R(r)’ e ‘F(f)’ para controlar o ângulo que roda o eixo de revolução da cabeça
 function handleHeadMovement(delta) {
     'use strict';
     // head rotation (max rotation = -PI rads)
@@ -487,7 +484,7 @@ function handleHeadMovement(delta) {
     }
     head.rotation.x = THREE.MathUtils.clamp(head.rotation.x + rotation.x, -Math.PI, 0);
     
-    if (head.rotation.x == -Math.PI) {
+    if (head.rotation.x == -Math.PI) { 
         head.userData.state = IS_TRUCK;
     }
     else if (head.rotation.x == 0) {
@@ -498,6 +495,7 @@ function handleHeadMovement(delta) {
     }
 }
 
+//‘E(e)’ e ‘D(d)’ para controlar o deslocamento que translada os membros superiores medial e lateralmente;
 function handleArmsMovement(delta) {
     'use strict';
     // arm translation (max translation = 8)
@@ -514,6 +512,7 @@ function handleArmsMovement(delta) {
         return;
     }
 
+    //DUVIDA clamp
     rightArm.position.x = THREE.MathUtils.clamp(rightArm.position.x + translation.x, 29-8, 29);
     leftArm.position.x = THREE.MathUtils.clamp(leftArm.position.x - translation.x, -29, -29+8);
         
@@ -529,6 +528,7 @@ function handleArmsMovement(delta) {
     }
 }
 
+//‘Q(q)’ e ‘A(a)’ para controlar o ângulo que roda o eixo de revolução dos pés;
 function handleFeetMovement(delta) {
     'use strict';
     // feet rotation (max rotation = -PI rads)
@@ -558,6 +558,7 @@ function handleFeetMovement(delta) {
     }
 }
 
+//b. ‘W(w)’ e ‘S(s)’ para controlar o ângulo que roda o eixo de revolução da cintura; PERNAS
 function handleLegsMovement(delta) {
     'use strict';
     // legs rotation (max rotation = -PI rads)
@@ -587,6 +588,7 @@ function handleLegsMovement(delta) {
     }
 }
 
+//teclas das setas para o reposicionar segundo os eixos globais dos X e Z
 function handleTrailerMovement(delta) {
     'use strict';
     let translation = new THREE.Vector3(0, 0, 0);
@@ -605,7 +607,7 @@ function handleTrailerMovement(delta) {
     }
     if (translation.x != 0 || translation.z != 0) {
         translation.normalize();
-        translation = translation.multiplyScalar(TRAILER_SPEED * delta);
+        translation = translation.multiplyScalar(TRAILER_SPEED * delta); //velocidade constante ver enunciado
         trailer.position.add(translation);
         updateAABBTrailer(translation.x, translation.z);
     }
@@ -625,7 +627,7 @@ function update(){
     let delta = clock.getDelta();
 
     for(let i=0; i<5; i++) {
-        if (keyCamerasPressed[i]) {
+        if (keyCamerasPres1sed[i]) {
             activeCamera = cameras[i].cam;
         }
     }
@@ -667,6 +669,7 @@ function render() {
 ////////////////////////////////
 /* INITIALIZE ANIMATION CYCLE */
 ////////////////////////////////
+// temos size do window, create scene, cameras, clock, e depois keydown, keyup e resize
 function init() {
     'use strict';
 
