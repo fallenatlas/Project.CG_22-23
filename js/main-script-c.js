@@ -46,12 +46,16 @@ let keyArrowUHeld = false;
 let keyArrowDHeld = false;
 
 let activeCamera, cameras, scene, scene1, renderer, clock;
-let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
+let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
 let skyMaterial, skydome;
+let moonMaterial, moon;
 let ovni;
+let ambientLight, directionalLight, isLightOn = true;
+let lambertMaterial, phongMaterial, toonMaterial;
 
 const skyColors = [];
 const grassColors = [];
+const moonColors = [];
 const vertices = new Float32Array( [
     -500.0, -500.0,  500.0, // v0
     500.0, -500.0,  500.0, // v1
@@ -91,6 +95,7 @@ function createScene() {
 
     //createField(0,0,0);
     createSkydome(0,0,0);
+    createMoon(0,100,0);
     //createOVNI(0, 50, 0);
     //createHouse();
     //create
@@ -155,6 +160,14 @@ function initBackground() {
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
 
+    _color.setColorName('moon yellow');
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    
     backgroundMaterial = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, vertexColors: true } );
 }
 
@@ -200,8 +213,29 @@ function generateFlowerFieldTexture() {
     grassTexture.texture.repeat.set(1, 1);
 }
 
+// propriedades de emissividade do material por forma a que a lua seja brilhante
+function generateMoonTexture() {
+    // Create a different scene to hold our buffer objects
+    moonScene = new THREE.Scene();
+    // Create the texture that will store our result
+    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
+
+    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
+    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
+    moonScene.add(mesh);
+
+    renderer.setSize(1000, 1000);
+    renderer.setRenderTarget(moonTexture);
+    renderer.render(moonScene, moonTextureCamera);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setRenderTarget(null);
+
+    moonTexture.texture.repeat.set(1, 1);
+}
+
 /////////////////////
-/* CREATE CLOCK */
+/* CREATE CLOCK    */
 /////////////////////
 function createClock(){
     'use strict';
@@ -260,7 +294,6 @@ function createPerspectiveCamera(x, y, z, lookat) {
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 
-
 function createField(x, y, z) {
     'use strict';
     const geometry = new THREE.PlaneGeometry( 500, 500 );
@@ -285,6 +318,53 @@ function createSkydome(x, y, z) {
     skydome = new THREE.Mesh( geometry, skyMaterial );
     skydome.position.set(x, y, z);
     scene.add( skydome );
+}
+
+function createMoon(x, y, z) {
+    'use strict;'
+    const geometry = new THREE.SphereGeometry( 50, 32, 32 );
+    moonMaterial = new THREE.MeshBasicMaterial( {color:  'moon yellow'} ); // 0xfefcd7 - glowing moon yellow
+    
+    lambertMaterial = new THREE.MeshLambertMaterial({
+        color: 'moon yellow', 
+        emissive: 0xffff00,
+        emissiveIntensity: 1,
+    });
+    
+    phongMaterial = new THREE.MeshPhongMaterial({
+        color: 'moon yellow',
+        emissive: 0xffff00,
+        emissiveIntensity: 1,
+    });
+    
+    toonMaterial = new THREE.MeshToonMaterial({
+        color: 'moon yellow',
+        emissive: 0xffff00,
+        emissiveIntensity: 1,
+    });
+    
+    moon = new THREE.Mesh(geometry, moonMaterial);
+    moon.position.set(x, y, z);
+    scene.add(moon);
+}
+
+//////////////////
+/* MOON LIGHTS  */
+//////////////////
+
+function createMoonLights() {
+    ambientLight = new AmbientLight('moon yellow', 2);
+    
+    directionalLight = new DirectionalLight('moon yellow', 5);
+    directionalLight.position.set( 10, 10, 10 );
+    
+    scene.add(ambientLight);
+    scene.add(directionalLight);
+}
+
+function toggleMoonLight() {
+    isLightOn = !isLightOn;
+    directionalLight.visible = isLightOn;
 }
 
 ////////////
@@ -434,12 +514,27 @@ function onKeyDown(e) {
         generateSkyboxTexture();
         skyMaterial.map = skyTexture.texture;
     }
+    // moon light on
+    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        toggleMoonLight();
+    }
+    // moon lambertMaterial
+    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
+        moon.moonMaterial = lambertMaterial;
+    }
+    // moon phongMaterial
+    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
+        moon.moonMaterial = phongMaterial;
+    }
+    // moon toonMaterial
+    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
+        moon.moonMaterial = toonMaterial;
+    }
+
     /*
     if (e.keyCode = 50) {
         generateFlowerFieldTexture();
     }
-    */
-    /*
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = true;
     }
@@ -457,7 +552,6 @@ function onKeyDown(e) {
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
         keyEHeld = true;
     }
-    // feet rotation
     if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
         keyQHeld = true;
     }
@@ -497,6 +591,10 @@ function onKeyUp(e){
         keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
     }
 
+    // moon light off
+    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDHeld = true;
+    }
     /*
     if (e.keyCode == 54) { //key 6
         key6Pressed = false;
