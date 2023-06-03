@@ -13,13 +13,21 @@ const CAMERA_INPUTS = [49, 50];
 const KEY_CODE_OFFSET = 49;
 
 const OVNI_SPEED = 32;
-const OVNI_ROTATION = 16;
+const OVNI_N_LIGHTS = 6;
 
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'white', wireframe: false }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: false }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'plum', wireframe: false }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'skyblue', wireframe: false }) },
+]
+
+const PhongMaterials = [
+    { mat:  new THREE.MeshPhongMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
+    { mat:  new THREE.MeshPhongMaterial({ color: 'grey', wireframe: false }) }, // ovni
+    { mat:  new THREE.MeshPhongMaterial({ color: 'yellow', wireframe: false }) }, // lights
+    { mat:  new THREE.MeshPhongMaterial({ color: 'chocolate', wireframe: false }) }, // tree
+    { mat:  new THREE.MeshPhongMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
 ]
 
 // cameras
@@ -33,29 +41,33 @@ let key2Held = false;
 
 let key6Pressed = false;
 let key6Held = false;
-// head rotation
-let keyRHeld = false;
-let keyFHeld = false;
-// arm translation
-let keyEHeld = false;
+// switch moon lights on and off
+let keyDPressed = false;
 let keyDHeld = false;
-// feet rotation
-let keyQHeld = false;
-let keyAHeld = false;
-// legs rotation
-let keyWHeld = false;
+// switch OVNI's point lights
+let keyPPressed = false;
+let keyPHeld = false;
+// switch OVNI's spot light
+let keySPressed = false;
 let keySHeld = false;
-// trailer slide
-let keyArrowLHeld = false;
-let keyArrowRHeld = false;
-let keyArrowUHeld = false;
-let keyArrowDHeld = false;
+// OVNI movement
+let keyArrowLPressed = false;
+let keyArrowRPressed = false;
+let keyArrowUPressed = false;
+let keyArrowDPressed = false;
+// change materials
+let keyWPressed = false;
+let keyEPressed = false;
+let keyQPressed = false;
+let keyRPressed = false;
 
 let activeCamera, cameras, scene, scene1, renderer, clock;
 let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
 let skyMaterial, skydome;
 let grassMaterial, grassPlane;
 let ovni;
+let ovniLights = [];
+let trees = [];
 
 const skyColors = [];
 const grassColors = [];
@@ -96,7 +108,7 @@ function createScene() {
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
 
-    const light = new THREE.AmbientLight( 0x404040 ); // soft white light
+    const light = new THREE.AmbientLight( 0xfefcd7, 0.2 );
     scene.add( light );
 
     const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
@@ -104,9 +116,8 @@ function createScene() {
 
     createField(0,0,0);
     createSkydome(0,0,0);
-    //createOVNI(0, 50, 0);
-    //createHouse();
-    //create
+    createOVNI(0,150,0);
+    createTrees();
 }
 
 /////////////////////
@@ -231,7 +242,7 @@ function createCameras() {
     grassTextureCamera = createOrthogonalCamera(0, 0, 1215, 1);
     //let topViewCamera = createOrthogonalCamera(0, 200, 0, 1);
     //let isoCameraO = createOrthogonalCamera(50, 50, 50, 2);
-    let isoCameraP1 = createPerspectiveCamera(250, 250, 250, new THREE.Vector3(0, 0, 0));
+    let isoCameraP1 = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
     //let isoCameraP2 = createPerspectiveCamera(0, 0, 1215, scene.position);
     //let isoCameraP2 = createPerspectiveCamera(1500, 0, 1215, new THREE.Vector3(1500, 0, 0));
 
@@ -303,44 +314,201 @@ function createSkydome(x, y, z) {
     scene.add( skydome );
 }
 
+function createOVNI(x, y, z) {
+    'use strict';
+    ovni = new THREE.Object3D();
+    addBody(ovni, 0, 0, 0);
+    addCockpit(ovni, 0, 50*0.35, 0);
+    addPointLights(ovni);
+    addBottom(ovni, 0, -50*0.35, 0);
+
+    scene.add(ovni);
+
+    ovni.position.set(x, y, z);
+}
+
+function addBody(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(50);
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[1].mat);
+    mesh.scale.set(1, 0.35, 1);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addCockpit(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(20);
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[0].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addPointLights(obj, x, y, z) {
+    'use strict';
+    let rotation = 0;
+
+    for (let i=0; i < OVNI_N_LIGHTS; i++) {
+        addPointLight(obj, rotation);
+        rotation += Math.PI*2/OVNI_N_LIGHTS;
+    }
+}
+
+function addPointLight(obj, rotation) {
+    'use strict';
+    let light = new THREE.Object3D();
+
+    let geometry = new THREE.SphereGeometry(2);
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[2].mat);
+    mesh.position.set(30, 0, 0);
+    light.add(mesh);
+
+    // add light
+    let pointlight = new THREE.PointLight(0xffffff, 2, 40);
+    pointlight.position.set( 30, -2.5, 0);
+    ovniLights.push(pointlight);
+    light.add(pointlight);
+    
+    light.position.set(0, -14, 0);
+    light.rotateY(rotation);
+    obj.add(light);
+    
+
+    //const helper = new THREE.PointLightHelper(pointlight, 1);
+    //scene.add(helper);
+}
+
+function addBottom(obj, x, y, z) {
+    'use strict';
+    let bottom = new THREE.Object3D();
+
+    // add cylinder
+    let geometry = new THREE.CylinderGeometry( 20, 20, 8, 40 ); 
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[1].mat);
+    bottom.add(mesh);
+
+    // add Spot Light
+    let spotLight = new THREE.SpotLight( 0xffffff, 10, 150, Math.PI/6 );
+    ovniLights.push(spotLight);
+    bottom.add(spotLight);
+
+    bottom.position.set(x, y, z);
+    obj.add(bottom);
+
+    //const helper = new THREE.SpotLightHelper(spotLight);
+    //scene.add(helper);
+
+}
+
+function createTrees() {
+    'use strict';
+    addTree(0, 0, 0, 1, 0);
+    addTree(-100, 0, 100, 1.5, Math.PI);
+    addTree(0, 0, 200, 0.7, Math.PI/2);
+    addTree(0, 0, 0, 1, 0);
+}
+
+function addTree(x, y, z, scale, rotation) {
+    'use strict';
+    let tree = new THREE.Object3D();
+    addTrunk(tree, 0, 0, 0);
+    addLeaves(tree, 0, 30, 0, 30);
+    addSecondaryTrunk(tree, -14, -3, 0);
+    addLeaves(tree, -25, 10, 0, 17);
+    addThirdTrunk(tree, -12 ,2 ,8);
+    addLeaves(tree, -12, 8, 15, 10);
+    tree.scale.set(scale, scale, scale);
+    tree.rotateY(rotation);
+    tree.position.set(x, y+60*scale/2, z);
+
+    scene.add(tree);
+    trees.push(tree);
+}
+
+function addTrunk(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.CylinderGeometry( 6, 6, 60); 
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    mesh.position.set(x, y, z);
+    obj.add(mesh);
+}
+
+function addSecondaryTrunk(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.CylinderGeometry( 3, 3, 40); 
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    mesh.position.set(x, y, z);
+    mesh.rotateZ(Math.PI/4);
+    obj.add(mesh);
+}
+
+function addThirdTrunk(obj, x, y, z) {
+    'use strict';
+    let geometry = new THREE.CylinderGeometry( 2, 2, 20); 
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    mesh.position.set(x, y, z);
+    mesh.rotateX(Math.PI/4);
+    obj.add(mesh);
+}
+
+function addLeaves(obj, x, y, z, raius) {
+    'use strict';
+    let geometry = new THREE.SphereGeometry(raius); 
+    let mesh = new THREE.Mesh(geometry, PhongMaterials[4].mat);
+    mesh.position.set(x, y, z);
+    mesh.scale.set(1, 0.5, 1);
+    obj.add(mesh);
+}
+
 ////////////
 /* UPDATE */
 ////////////
-/*
+
 function handleOvniMovement(delta) {
     'use strict';
     let translation = new THREE.Vector3(0, 0, 0);
-    // trailer movement
-    if(keyArrowLHeld) { //left arrow
+    // OVNI movement
+    if(keyArrowLPressed) { //left arrow
         translation.x -= 1;
     }
-    if(keyArrowRHeld) { //right arrow
+    if(keyArrowRPressed) { //right arrow
         translation.x += 1;
     }
-    if(keyArrowUHeld) { //up arrow
+    if(keyArrowUPressed) { //up arrow
         translation.z -= 1;
     }
-    if(keyArrowDHeld) { //down arrow
+    if(keyArrowDPressed) { //down arrow
         translation.z += 1;
     }
     if (translation.x != 0 || translation.z != 0) {
         translation.normalize();
-        translation = translation.multiplyScalar(TRAILER_SPEED * delta);
-        trailer.position.add(translation);
-        updateAABBTrailer(translation.x, translation.z);
+        translation = translation.multiplyScalar(OVNI_SPEED * delta);
+        ovni.position.add(translation);
+    }
+    // update spot light's target
+    ovniLights[OVNI_N_LIGHTS].target.position.add(translation);
+    ovniLights[OVNI_N_LIGHTS].target.updateMatrixWorld();
+}
+
+function handleOvniRotation(delta) {
+    ovni.rotateY(delta * Math.PI/OVNI_SPEED);
+}
+
+function handleOvniLights() {
+    if (keyPPressed && !keyPHeld) { //key P
+        // activate/deactivate point lights
+        keyPHeld = true;
+        for (let i=0; i<=OVNI_N_LIGHTS-1; i++) {
+            ovniLights[i].visible = !ovniLights[i].visible;
+        }
+    }
+
+    if (keySPressed && !keySHeld) { //key S
+        // activate/deactivate ovni spot light
+        keySHeld = true;
+        ovniLights[OVNI_N_LIGHTS].visible = !ovniLights[OVNI_N_LIGHTS].visible;
     }
 }
-
-function handleOvniRotation() {
-
-}
-
-function handleMovement(delta) {
-    'use strict';
-    handleOvniMovement(delta);
-}
-
-*/
 
 function update(){
     'use strict';
@@ -362,17 +530,21 @@ function update(){
     //    }
     //}
 
-    if (key1Pressed && !key1Held) { //key 6
+    if (key1Pressed && !key1Held) { //key 1
         key1Held = true;
         generateFlowerFieldTexture();
         grassMaterial.map = grassTexture.texture;
     }
 
-    if (key2Pressed && !key2Held) { //key 6
+    if (key2Pressed && !key2Held) { //key 2
         key2Held = true;
         generateSkyboxTexture();
         skyMaterial.map = skyTexture.texture;
     }
+
+    handleOvniMovement(delta);
+    handleOvniRotation(delta);
+    handleOvniLights();
 
     /*
     if (key6Pressed && !key6Held) { //key 6
@@ -382,7 +554,6 @@ function update(){
         }
     }
     
-    handleMovement(delta);
     */
 }
 
@@ -441,7 +612,7 @@ function onResize() {
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
-        for (let i = 0; i < 2; i++) {
+        for (let i = 0; i < 1; i++) {
             cameras[i].cam.aspect = aspect;
             cameras[i].cam.updateProjectionMatrix();
         }
@@ -465,6 +636,49 @@ function onKeyDown(e) {
     if (e.keyCode == 50) {
         key2Pressed = true;
     }
+
+    // directional light
+    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDPressed = true;
+    }
+
+    // OVNI lights
+    if (e.keyCode == 83) { //key S
+        keySPressed = true;
+    }
+
+    if (e.keyCode == 80) { //key P
+        keyPPressed = true;
+    }
+
+    // OVNI movement
+    if (e.keyCode == 37) { //key arrow left
+        keyArrowLPressed = true;
+    }
+    if (e.keyCode == 39) { //key arrow right
+        keyArrowRPressed = true;
+    }
+    if (e.keyCode == 38) { //key arrow up
+        keyArrowUPressed = true;
+    }
+    if (e.keyCode == 40) { //key arrow down
+        keyArrowDPressed = true;
+    }
+    // change materials
+    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
+        keyQPressed = true;
+    }
+
+    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
+        keyWPressed = true;
+    }
+
+    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
+        keyEPressed = true;
+    }
+    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
+        keyRPressed = true;
+    }
     /*
     if (e.keyCode = 50) {
         generateFlowerFieldTexture();
@@ -474,47 +688,7 @@ function onKeyDown(e) {
     if (e.keyCode == 54) { //tecla 6
         key6Pressed = true;
     }
-    // head rotation
-    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHeld = true;
-    }
-    if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHeld = true;
-    }
-    // arm translation
-    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHeld = true;
-    }
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHeld = true;
-    }
-    // feet rotation
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHeld = true;
-    }
-    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHeld = true;
-    }
-    // leg rotation
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHeld = true;
-    }
-    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
-        keySHeld = true;
-    }
-    // trailer slide
-    if (e.keyCode == 37) { //key arrow left
-        keyArrowLHeld = true;
-    }
-    if (e.keyCode == 39) { //key arrow right
-        keyArrowRHeld = true;
-    }
-    if (e.keyCode == 38) { //key arrow up
-        keyArrowUHeld = true;
-    }
-    if (e.keyCode == 40) { //key arrow down
-        keyArrowDHeld = true;
-    }
+    
     */
 }
 
@@ -536,47 +710,49 @@ function onKeyUp(e){
         key2Pressed = false;
         key2Held = false;
     }
-    /*
-    // head rotation
-    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHeld = false;
-    }
-    if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHeld = false;
-    }
-    // arm translation
+
+    // directional light
     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHeld = false;
+        keyDPressed = true;
     }
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHeld = false;
-    }
-    // feet rotation
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHeld = false;
-    }
-    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHeld = false;
-    }
-    // leg rotation
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHeld = false;
-    }
-    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
+
+    // OVNI lights
+    if (e.keyCode == 83) { //key S
+        keySPressed = false;
         keySHeld = false;
     }
-    // trailer slide
+
+    if (e.keyCode == 80) { //key P
+        keyPPressed = false;
+        keyPHeld = false;
+    }
+
+    // OVNI movement
     if (e.keyCode == 37) { //key arrow left
-        keyArrowLHeld = false;
+        keyArrowLPressed = false;
     }
     if (e.keyCode == 39) { //key arrow right
-        keyArrowRHeld = false;
+        keyArrowRPressed = false;
     }
     if (e.keyCode == 38) { //key arrow up
-        keyArrowUHeld = false;
+        keyArrowUPressed = false;
     }
     if (e.keyCode == 40) { //key arrow down
-        keyArrowDHeld = false;
+        keyArrowDPressed = false;
     }
-    */
+    // change materials
+    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
+        keyQPressed = false;
+    }
+
+    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
+        keyWPressed = false;
+    }
+
+    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
+        keyEPressed = false;
+    }
+    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
+        keyRPressed = false;
+    }
 }
