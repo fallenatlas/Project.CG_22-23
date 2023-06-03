@@ -24,7 +24,13 @@ const materials = [
 
 // cameras
 let keyCamerasPressed = [false, false];
-// switch solid colors/wireframe view
+// generate grass
+let key1Pressed = false;
+let key1Held = false;
+// generate skybox
+let key2Pressed = false;
+let key2Held = false;
+
 let key6Pressed = false;
 let key6Held = false;
 // head rotation
@@ -48,6 +54,7 @@ let keyArrowDHeld = false;
 let activeCamera, cameras, scene, scene1, renderer, clock;
 let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
 let skyMaterial, skydome;
+let grassMaterial, grassPlane;
 let ovni;
 
 const skyColors = [];
@@ -79,7 +86,7 @@ function createTextureScene(){
 
     initBackground();
     generateSkyboxTexture();
-    //generateFlowerFieldTexture();
+    generateFlowerFieldTexture();
 }
 
 function createScene() {
@@ -89,7 +96,13 @@ function createScene() {
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
 
-    //createField(0,0,0);
+    const light = new THREE.AmbientLight( 0x404040 ); // soft white light
+    scene.add( light );
+
+    const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+    scene.add( directionalLight );
+
+    createField(0,0,0);
     createSkydome(0,0,0);
     //createOVNI(0, 50, 0);
     //createHouse();
@@ -197,7 +210,7 @@ function generateFlowerFieldTexture() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setRenderTarget(null);
 
-    grassTexture.texture.repeat.set(1, 1);
+    grassTexture.texture.repeat.set(2, 2);
 }
 
 /////////////////////
@@ -263,18 +276,21 @@ function createPerspectiveCamera(x, y, z, lookat) {
 
 function createField(x, y, z) {
     'use strict';
-    const geometry = new THREE.PlaneGeometry( 500, 500 );
+    let geometry = new THREE.PlaneGeometry( 600, 600, 300, 300 );
     const loader = new THREE.TextureLoader();
-    const displacement = loader.load('heightmap.png');
-    const material = new THREE.MeshStandardMaterial({
+    const displacement = loader.load('js/heightmap.png');
+    //displacement.wrapS = displacement.wrapT = THREE.MirroredRepeatWrapping;
+    //displacement.repeat.set(2, 2);
+    grassMaterial = new THREE.MeshStandardMaterial({
+        displacementScale: 50,
         displacementMap: displacement,
-        displacementScale: 1,
-        map: grassTexture
+        map: grassTexture.texture
     });
 
-    const plane = new THREE.Mesh( geometry, material );
-    plane.position.set(x, y, z);
-    scene.add( plane );
+    grassPlane = new THREE.Mesh( geometry, grassMaterial );
+    grassPlane.rotateX(-Math.PI / 2);
+    grassPlane.position.set(x, y, z);
+    scene.add( grassPlane );
 }
 
 function createSkydome(x, y, z) {
@@ -330,8 +346,8 @@ function update(){
     'use strict';
     let delta = clock.getDelta();
 
-    for(let i=0; i<2; i++) {
-        if (keyCamerasPressed[i]) {
+    //for(let i=0; i<2; i++) {
+    //    if (keyCamerasPressed[i]) {
             /*
             if (i == 0) {
                 activeCamera = skyTextureCamera;
@@ -343,7 +359,19 @@ function update(){
             }
             */
             //activeCamera = cameras[i].cam;
-        }
+    //    }
+    //}
+
+    if (key1Pressed && !key1Held) { //key 6
+        key1Held = true;
+        generateFlowerFieldTexture();
+        grassMaterial.map = grassTexture.texture;
+    }
+
+    if (key2Pressed && !key2Held) { //key 6
+        key2Held = true;
+        generateSkyboxTexture();
+        skyMaterial.map = skyTexture.texture;
     }
 
     /*
@@ -430,9 +458,12 @@ function onKeyDown(e) {
         keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = true;
     }
 
+    if (e.keyCode == 49) {
+        key1Pressed = true;
+    }
+
     if (e.keyCode == 50) {
-        generateSkyboxTexture();
-        skyMaterial.map = skyTexture.texture;
+        key2Pressed = true;
     }
     /*
     if (e.keyCode = 50) {
@@ -497,11 +528,15 @@ function onKeyUp(e){
         keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
     }
 
-    /*
-    if (e.keyCode == 54) { //key 6
-        key6Pressed = false;
-        key6Held = false;
+    if (e.keyCode == 49) { //key 6
+        key1Pressed = false;
+        key1Held = false;
     }
+    if (e.keyCode == 50) { //key 6
+        key2Pressed = false;
+        key2Held = false;
+    }
+    /*
     // head rotation
     if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
         keyRHeld = false;
@@ -545,4 +580,3 @@ function onKeyUp(e){
     }
     */
 }
-
