@@ -31,7 +31,8 @@ const PhongMaterials = [
 ]
 
 // cameras
-let keyCamerasPressed = [false, false];
+let keyChangeNormalCameraPressed = false;
+let keyChangeNormalCameraHeld = false;
 // generate grass
 let key1Pressed = false;
 let key1Held = false;
@@ -61,7 +62,8 @@ let keyEPressed = false;
 let keyQPressed = false;
 let keyRPressed = false;
 
-let activeCamera, cameras, scene, scene1, renderer, clock;
+let effect, stereoCamera, groundCamera, perspectiveCamera, activeCamera;
+let scene, scene1, renderer, clock;
 let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
 let grassMaterial, grassPlane;
 let skyMaterial, skydome;
@@ -72,6 +74,8 @@ let ovni;
 let lambertMaterial, phongMaterial, toonMaterial;
 let ovniLights = [];
 let trees = [];
+
+let button;
 
 const skyColors = [];
 const grassColors = [];
@@ -188,6 +192,7 @@ function generateSkyboxTexture() {
     skyScene.add( mesh );
     addStars();
 
+    renderer.xr.enabled = false;
     renderer.setSize(1000, 1000);
     renderer.setRenderTarget(skyTexture);
     renderer.render(skyScene, skyTextureCamera);
@@ -195,6 +200,8 @@ function generateSkyboxTexture() {
     renderer.setRenderTarget(null);
 
     skyTexture.texture.repeat.set(4, 2);
+
+    renderer.xr.enabled = true;
 }
 
 function generateFlowerFieldTexture() {
@@ -209,6 +216,7 @@ function generateFlowerFieldTexture() {
     grassScene.add( mesh );
     addFlowers();
 
+    renderer.xr.enabled = false;
     renderer.setSize(1000, 1000);
     renderer.setRenderTarget(grassTexture);
     renderer.render(grassScene, grassTextureCamera);
@@ -216,6 +224,7 @@ function generateFlowerFieldTexture() {
     renderer.setRenderTarget(null);
 
     grassTexture.texture.repeat.set(2, 2);
+    renderer.xr.enabled = true;
 }
 
 
@@ -237,16 +246,15 @@ function createCameras() {
     grassTextureCamera = createOrthogonalCamera(0, 0, 1215, 1);
     //let topViewCamera = createOrthogonalCamera(0, 200, 0, 1);
     //let isoCameraO = createOrthogonalCamera(50, 50, 50, 2);
-    let isoCameraP1 = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
+    stereoCamera = new THREE.StereoCamera();
+    stereoCamera.aspect = 0.5;
+    stereoCamera.eyeSep = 1;
+    perspectiveCamera = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
+    groundCamera = createPerspectiveCamera(0, 250, 0, new THREE.Vector3(0, 250, -10));
     //let isoCameraP2 = createPerspectiveCamera(0, 0, 1215, scene.position);
     //let isoCameraP2 = createPerspectiveCamera(1500, 0, 1215, new THREE.Vector3(1500, 0, 0));
 
-    cameras = [
-        { cam: isoCameraP1 },
-        //{ cam: isoCameraP2 },
-    ];
-
-    activeCamera = isoCameraP1;
+    activeCamera = perspectiveCamera;
 }
 
 function createOrthogonalCamera(x, y, z, zoom) {
@@ -577,6 +585,14 @@ function update(){
     //    }
     //}
 
+    if (keyChangeNormalCameraPressed && !keyChangeNormalCameraHeld) { //key 1
+        keyChangeNormalCameraHeld = true;
+        //const button = document.getElementById("VRButton");
+        //button.click();
+        //button.onSessionEnded();
+        activeCamera = perspectiveCamera;
+    }
+
     if (key1Pressed && !key1Held) { //key 1
         key1Held = true;
         generateFlowerFieldTexture();
@@ -609,7 +625,30 @@ function update(){
 /////////////
 function render() {
     'use strict';
-    renderer.render(scene, activeCamera);
+    if (renderer.xr.isPresenting) {
+        activeCamera = groundCamera;
+        
+        activeCamera.updateWorldMatrix();
+        stereoCamera.update(activeCamera);
+
+        let size = new THREE.Vector2();
+        renderer.getSize(size);
+
+        renderer.setScissorTest(true);
+
+        renderer.setScissor(0, 0, size.width / 2, size.height);
+        renderer.setViewport(0, 0, size.width / 2, size.height);
+        renderer.render(scene, stereoCamera.cameraL);
+
+        renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
+        renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
+        renderer.render(scene, stereoCamera.cameraR);
+
+        renderer.setScissorTest(false);
+    }
+    else {
+        renderer.render(scene, activeCamera);
+    }
 }
 
 ////////////////////////////////
@@ -624,6 +663,13 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // vr camera
+    button = VRButton.createButton( renderer );
+    document.body.appendChild( button );
+    renderer.xr.enabled = true;
+
+    renderer.setAnimationLoop( animate );
+
     createCameras();
     createTextureScene();
     createScene();
@@ -634,8 +680,11 @@ function init() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', onResize);
-}
 
+    //renderer.xr.addEventListener('sessionstart', hi);
+
+    //renderer.xr.addEventListener('sessionend', hi);
+}
 
 /////////////////////
 /* ANIMATION CYCLE */
@@ -645,7 +694,7 @@ function animate() {
     'use strict';
     update();
     render();
-    requestAnimationFrame(animate);
+    //requestAnimationFrame(animate);
 }
 
 ////////////////////////////
@@ -659,10 +708,11 @@ function onResize() {
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
-        for (let i = 0; i < 1; i++) {
-            cameras[i].cam.aspect = aspect;
-            cameras[i].cam.updateProjectionMatrix();
-        }
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+
+        groundCamera.aspect = aspect;
+        groundCamera.updateProjectionMatrix();
     }
 }
 
@@ -672,8 +722,8 @@ function onResize() {
 
 function onKeyDown(e) {
     'use strict';
-    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
-        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = true;
+    if (e.keyCode == 53) { //keys 1 to 5
+        keyChangeNormalCameraPressed = true;
     }
 
     if (e.keyCode == 49) { //key 1
@@ -738,13 +788,14 @@ function onKeyDown(e) {
 
 function onKeyUp(e){
     'use strict';
-    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
-        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
+    if (e.keyCode == 53) { //keys 1 to 5
+        keyChangeNormalCameraPressed = false;
+        keyChangeNormalCameraHeld = false;
     }
 
-    if (e.keyCode == 54) { //key 1
-        key6Pressed = false;
-        key6Held = false;
+    if (e.keyCode == 49) { //key 1
+        key1Pressed = false;
+        key1Held = false;
     }
     if (e.keyCode == 50) { //key 2
         key2Pressed = false;
