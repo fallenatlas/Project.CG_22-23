@@ -62,18 +62,20 @@ let keyQPressed = false;
 let keyRPressed = false;
 
 let activeCamera, cameras, scene, scene1, renderer, clock;
-let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
+let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
+let grassMaterial, grassPlane;
 let skyMaterial, skydome;
+
 let moonMaterial, moon;
+let ambientLight, directionalLight;
 let ovni;
-let ambientLight, directionalLight, isLightOn = true;
 let lambertMaterial, phongMaterial, toonMaterial;
 let ovniLights = [];
 let trees = [];
 
 const skyColors = [];
 const grassColors = [];
-const moonColors = [];
+//const moonColors = [];
 const vertices = new Float32Array( [
     -500.0, -500.0,  500.0, // v0
     500.0, -500.0,  500.0, // v1
@@ -92,13 +94,6 @@ let backgroundGeometry1, backgroundGeometry2, backgroundMaterial;
 /////////////////////
 function createTextureScene(){
     'use strict';
-    //scene = new THREE.Scene();
-
-    /*
-    const color = 'lightblue';
-    scene.background = new THREE.Color(color);
-    */
-
     initBackground();
     generateSkyboxTexture();
     generateFlowerFieldTexture();
@@ -111,18 +106,12 @@ function createScene() {
     const color = 'lightblue';
     scene.background = new THREE.Color(color);
 
-    const light = new THREE.AmbientLight( 0xfefcd7, 0.2 );
-    scene.add( light );
-
-    const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-    scene.add( directionalLight );
-
     createField(0,0,0);
     createSkydome(0,0,0);
-    createMoon(0,250,0);
-    //createOVNI(0, 50, 0);
-    //createHouse();
-    //create
+    createMoonLights();
+    createMoon();
+    createOVNI(0,150,0);
+    createTrees();
 }
 
 /////////////////////
@@ -183,13 +172,6 @@ function initBackground() {
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
-    _color.setColorName('moon yellow');
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
     
     backgroundMaterial = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, vertexColors: true } );
 }
@@ -236,27 +218,7 @@ function generateFlowerFieldTexture() {
     grassTexture.texture.repeat.set(2, 2);
 }
 
-/*
-function generateMoonTexture() {
-    // Create a different scene to hold our buffer objects
-    moonScene = new THREE.Scene();
-    // Create the texture that will store our result
-    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
 
-    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
-    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
-    moonScene.add(mesh);
-
-    renderer.setSize(1000, 1000);
-    renderer.setRenderTarget(moonTexture);
-    renderer.render(moonScene, moonTextureCamera);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setRenderTarget(null);
-
-    moonTexture.texture.repeat.set(1, 1);
-}
-*/
 /////////////////////
 /* CREATE CLOCK    */
 /////////////////////
@@ -313,6 +275,24 @@ function createPerspectiveCamera(x, y, z, lookat) {
     return camera;
 }
 
+//////////////////
+/* MOON LIGHTS  */
+//////////////////
+
+function createMoonLights() {
+    'use strict';
+    ambientLight = new THREE.AmbientLight( 0xffd45f, 0.2 );
+
+    directionalLight = new THREE.DirectionalLight( 0xffd45f, 0.5 );
+    directionalLight.position.set( -200, 190, 50 );
+    
+    scene.add(ambientLight);
+    scene.add(directionalLight);
+
+    //const helper = new THREE.DirectionalLightHelper( directionalLight );
+    //scene.add( helper );
+}
+
 ////////////////////////
 /* CREATE OBJECT3D(S) */
 ////////////////////////
@@ -348,49 +328,28 @@ function createSkydome(x, y, z) {
 
 function createMoon(x, y, z) {
     'use strict;'
-    const geometry = new THREE.SphereGeometry( 50, 32, 32 );
-    moonMaterial = new THREE.MeshBasicMaterial( {color:  'moon yellow'} ); // 0xfefcd7 - glowing moon yellow
-    
+    const geometry = new THREE.SphereGeometry(20);
     lambertMaterial = new THREE.MeshLambertMaterial({
-        color: 'moon yellow', 
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
+        color: 0xffd45f, 
+        emissive: 0xffd45f,
+        emissiveIntensity: 0.5,
     });
     
     phongMaterial = new THREE.MeshPhongMaterial({
-        color: 'moon yellow',
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
+        color: 0xffd45f,
+        emissive: 0xffd45f,
+        emissiveIntensity: 0.5,
     });
     
     toonMaterial = new THREE.MeshToonMaterial({
-        color: 'moon yellow',
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
+        color: 0xffd45f,
+        emissive: 0xffd45f,
+        emissiveIntensity: 0.5,
     });
-    
+    moonMaterial = phongMaterial;
     moon = new THREE.Mesh(geometry, moonMaterial);
-    moon.position.set(x, y, z);
+    moon.position.set(-200, 190, 50);
     scene.add(moon);
-}
-
-//////////////////
-/* MOON LIGHTS  */
-//////////////////
-
-function createMoonLights() {
-    ambientLight = new AmbientLight('moon yellow', 2);
-    
-    directionalLight = new DirectionalLight('moon yellow', 5);
-    directionalLight.position.set( 10, 10, 10 );
-    
-    scene.add(ambientLight);
-    scene.add(directionalLight);
-}
-
-function toggleMoonLight() {
-    isLightOn = !isLightOn;
-    directionalLight.visible = isLightOn;
 }
 
 function createOVNI(x, y, z) {
@@ -570,10 +529,19 @@ function handleOvniMovement(delta) {
 }
 
 function handleOvniRotation(delta) {
+    'use strict';
     ovni.rotateY(delta * Math.PI/OVNI_SPEED);
 }
 
-function handleOvniLights() {
+function handleLights() {
+    'use strict';
+
+    if (keyDPressed && !keyDHeld) { //key D
+        // activate/deactivate directional light
+        keyDHeld = true;
+        directionalLight.visible = !directionalLight.visible;
+    }
+
     if (keyPPressed && !keyPHeld) { //key P
         // activate/deactivate point lights
         keyPHeld = true;
@@ -623,7 +591,7 @@ function update(){
 
     handleOvniMovement(delta);
     handleOvniRotation(delta);
-    handleOvniLights();
+    handleLights();
 
     /*
     if (key6Pressed && !key6Held) { //key 6
@@ -708,18 +676,19 @@ function onKeyDown(e) {
         keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = true;
     }
 
-    if (e.keyCode == 49) {
+    if (e.keyCode == 49) { //key 1
         key1Pressed = true;
     }
 
-    if (e.keyCode == 50) {
+    if (e.keyCode == 50) { // key 2
         key2Pressed = true;
     }
 
-    if (e.keyCode == 50) {
-        generateSkyboxTexture();
-        skyMaterial.map = skyTexture.texture;
+     // moon diretional light
+     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDPressed = true;
     }
+
     // OVNI lights
     if (e.keyCode == 83) { //key S
         keySPressed = true;
@@ -742,88 +711,25 @@ function onKeyDown(e) {
     if (e.keyCode == 40) { //key arrow down
         keyArrowDPressed = true;
     }
-    // change materials
+    // change materials to lambertMaterial
     if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
         keyQPressed = true;
+        moon.material = lambertMaterial;
     }
-
+    // change materials to toonMaterial
     if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
         keyWPressed = true;
+        moon.material = toonMaterial;
     }
-
+    // change materials to phongMaterial
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
         keyEPressed = true;
+        moon.material = phongMaterial;
     }
+    
     if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
         keyRPressed = true;
     }
-
-    // moon light on
-    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        toggleMoonLight();
-    }
-    // moon lambertMaterial
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        moon.moonMaterial = lambertMaterial;
-    }
-    // moon phongMaterial
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        moon.moonMaterial = phongMaterial;
-    }
-    // moon toonMaterial
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        moon.moonMaterial = toonMaterial;
-    }
-
-    /*
-    if (e.keyCode = 50) {
-        generateFlowerFieldTexture();
-    }
-    if (e.keyCode == 54) { //tecla 6
-        key6Pressed = true;
-    }
-    // head rotation
-    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHeld = true;
-    }
-    if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHeld = true;
-    }
-    // arm translation
-    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHeld = true;
-    }
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHeld = true;
-    }
-    // feet rotation
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHeld = true;
-    }
-    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHeld = true;
-    }
-    // leg rotation
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHeld = true;
-    }
-    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
-        keySHeld = true;
-    }
-    // trailer slide
-    if (e.keyCode == 37) { //key arrow left
-        keyArrowLHeld = true;
-    }
-    if (e.keyCode == 39) { //key arrow right
-        keyArrowRHeld = true;
-    }
-    if (e.keyCode == 38) { //key arrow up
-        keyArrowUHeld = true;
-    }
-    if (e.keyCode == 40) { //key arrow down
-        keyArrowDHeld = true;
-    }
-    */
 }
 
 ///////////////////////
@@ -836,18 +742,19 @@ function onKeyUp(e){
         keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
     }
 
-    if (e.keyCode == 54) { //key 6
+    if (e.keyCode == 54) { //key 1
         key6Pressed = false;
         key6Held = false;
     }
-    if (e.keyCode == 50) { //key 6
+    if (e.keyCode == 50) { //key 2
         key2Pressed = false;
         key2Held = false;
     }
 
     // directional light
     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDPressed = true;
+        keyDPressed = false;
+        keyDHeld = false;
     }
 
     // OVNI lights
@@ -890,4 +797,44 @@ function onKeyUp(e){
         keyRPressed = false;
     }
 }
+
+
+/*
+let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
+function generateMoonTexture() {
+    // Create a different scene to hold our buffer objects
+    moonScene = new THREE.Scene();
+    // Create the texture that will store our result
+    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
+
+    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
+    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
+    moonScene.add(mesh);
+
+    renderer.setSize(1000, 1000);
+    renderer.setRenderTarget(moonTexture);
+    renderer.render(moonScene, moonTextureCamera);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setRenderTarget(null);
+
+    moonTexture.texture.repeat.set(1, 1);
+}
+
+initBackground
+_color.setColorName('moon yellow');
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+*/
+
+/*
+function toggleMoonLight() {
+    isLightOn = !isLightOn;
+    directionalLight.visible = isLightOn;
+}
+*/
 
