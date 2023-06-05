@@ -14,6 +14,7 @@ const KEY_CODE_OFFSET = 49;
 
 const OVNI_SPEED = 32;
 const OVNI_N_LIGHTS = 6;
+const OVNI_ROTATION = 8;
 
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'white', wireframe: false }) },
@@ -22,25 +23,65 @@ const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'skyblue', wireframe: false }) },
 ]
 
-const PhongMaterials = [
+const lambertMaterials = [
+    { mat:  new THREE.MeshLambertMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
+    { mat:  new THREE.MeshLambertMaterial({ color: 'grey', wireframe: false }) }, // ovni
+    { mat:  new THREE.MeshLambertMaterial({ color: 'yellow', wireframe: false }) }, // lights
+    { mat:  new THREE.MeshLambertMaterial({ color: 'chocolate', wireframe: false }) }, // tree
+    { mat:  new THREE.MeshLambertMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
+];
+
+const phongMaterials = [
     { mat:  new THREE.MeshPhongMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
     { mat:  new THREE.MeshPhongMaterial({ color: 'grey', wireframe: false }) }, // ovni
     { mat:  new THREE.MeshPhongMaterial({ color: 'yellow', wireframe: false }) }, // lights
     { mat:  new THREE.MeshPhongMaterial({ color: 'chocolate', wireframe: false }) }, // tree
     { mat:  new THREE.MeshPhongMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
-]
+];
+
+const toonMaterials = [
+    { mat:  new THREE.MeshToonMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
+    { mat:  new THREE.MeshToonMaterial({ color: 'grey', wireframe: false }) }, // ovni
+    { mat:  new THREE.MeshToonMaterial({ color: 'yellow', wireframe: false }) }, // lights
+    { mat:  new THREE.MeshToonMaterial({ color: 'chocolate', wireframe: false }) }, // tree
+    { mat:  new THREE.MeshToonMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
+];
+
+const basicMaterials = [
+    { mat:  new THREE.MeshBasicMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
+    { mat:  new THREE.MeshBasicMaterial({ color: 'grey', wireframe: false }) }, // ovni
+    { mat:  new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: false }) }, // lights
+    { mat:  new THREE.MeshBasicMaterial({ color: 'chocolate', wireframe: false }) }, // tree
+    { mat:  new THREE.MeshBasicMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
+];
+
+// initialize when creating skydome
+let skyMaterials = [];
+let grassMaterials = [];
+
+const moonMaterials = [
+    {mat: new THREE.MeshLambertMaterial({ color: 0xffd45f, emissive: 0xffd45f, emissiveIntensity: 0.5 }) },
+    {mat: new THREE.MeshPhongMaterial({ color: 0xffd45f, emissive: 0xffd45f, emissiveIntensity: 0.5 }) },
+    {mat: new THREE.MeshToonMaterial({ color: 0xffd45f, emissive: 0xffd45f, emissiveIntensity: 0.5 })},
+    {mat: new THREE.MeshBasicMaterial({ color: 0xffd45f })},
+];
+
+const houseMaterials = [
+    {mat: new THREE.MeshLambertMaterial( { vertexColors: true } )},
+    {mat: new THREE.MeshPhongMaterial( { vertexColors: true } )},
+    {mat: new THREE.MeshToonMaterial( { vertexColors: true } )},
+    {mat: new THREE.MeshBasicMaterial( { vertexColors: true } )},
+];
 
 // cameras
-let keyCamerasPressed = [false, false];
+let keyChangeNormalCameraPressed = false;
+let keyChangeNormalCameraHeld = false;
 // generate grass
 let key1Pressed = false;
 let key1Held = false;
 // generate skybox
 let key2Pressed = false;
 let key2Held = false;
-
-let key6Pressed = false;
-let key6Held = false;
 // switch moon lights on and off
 let keyDPressed = false;
 let keyDHeld = false;
@@ -61,19 +102,24 @@ let keyEPressed = false;
 let keyQPressed = false;
 let keyRPressed = false;
 
-let activeCamera, cameras, scene, scene1, renderer, clock;
-let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
-let skyMaterial, skydome;
-let moonMaterial, moon;
-let ovni;
-let ambientLight, directionalLight, isLightOn = true;
-let lambertMaterial, phongMaterial, toonMaterial;
-let ovniLights = [];
+let effect, stereoCamera, groundCamera, perspectiveCamera, activeCamera;
+let scene, scene1, renderer, clock;
+let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
+
+
+// scene objects
+let skydome, moon, ovni, house, grassPlane;;
 let trees = [];
+
+// lights
+let directionalLight;
+let ovniLights = [];
+
+let button;
 
 const skyColors = [];
 const grassColors = [];
-const moonColors = [];
+//const moonColors = [];
 const vertices = new Float32Array( [
     -500.0, -500.0,  500.0, // v0
     500.0, -500.0,  500.0, // v1
@@ -92,13 +138,6 @@ let backgroundGeometry1, backgroundGeometry2, backgroundMaterial;
 /////////////////////
 function createTextureScene(){
     'use strict';
-    //scene = new THREE.Scene();
-
-    /*
-    const color = 'lightblue';
-    scene.background = new THREE.Color(color);
-    */
-
     initBackground();
     generateSkyboxTexture();
     generateFlowerFieldTexture();
@@ -108,21 +147,16 @@ function createScene() {
     'use strict';
     scene = new THREE.Scene();
 
-    const color = 'lightblue';
-    scene.background = new THREE.Color(color);
-
-    const light = new THREE.AmbientLight( 0xfefcd7, 0.2 );
-    scene.add( light );
-
-    const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
-    scene.add( directionalLight );
+    //const color = 'lightblue';
+    //scene.background = new THREE.Color(color);
 
     createField(0,0,0);
-    createSkydome(0,0,0);
-    createMoon(0,250,0);
-    //createOVNI(0, 50, 0);
-    //createHouse();
-    //create
+    createSkydome(0,-250,0);
+    createMoonLights();
+    createMoon();
+    createOVNI(0,150,0);
+    createTrees();
+    createHouse(100, 0, 150);
 }
 
 /////////////////////
@@ -207,6 +241,7 @@ function generateSkyboxTexture() {
     skyScene.add( mesh );
     addStars();
 
+    renderer.xr.enabled = false;
     renderer.setSize(1000, 1000);
     renderer.setRenderTarget(skyTexture);
     renderer.render(skyScene, skyTextureCamera);
@@ -214,6 +249,8 @@ function generateSkyboxTexture() {
     renderer.setRenderTarget(null);
 
     skyTexture.texture.repeat.set(4, 2);
+
+    renderer.xr.enabled = true;
 }
 
 function generateFlowerFieldTexture() {
@@ -228,6 +265,7 @@ function generateFlowerFieldTexture() {
     grassScene.add( mesh );
     addFlowers();
 
+    renderer.xr.enabled = false;
     renderer.setSize(1000, 1000);
     renderer.setRenderTarget(grassTexture);
     renderer.render(grassScene, grassTextureCamera);
@@ -235,29 +273,10 @@ function generateFlowerFieldTexture() {
     renderer.setRenderTarget(null);
 
     grassTexture.texture.repeat.set(2, 2);
+    renderer.xr.enabled = true;
 }
 
-/*
-function generateMoonTexture() {
-    // Create a different scene to hold our buffer objects
-    moonScene = new THREE.Scene();
-    // Create the texture that will store our result
-    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
 
-    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
-    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
-    moonScene.add(mesh);
-
-    renderer.setSize(1000, 1000);
-    renderer.setRenderTarget(moonTexture);
-    renderer.render(moonScene, moonTextureCamera);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setRenderTarget(null);
-
-    moonTexture.texture.repeat.set(1, 1);
-}
-*/
 /////////////////////
 /* CREATE CLOCK    */
 /////////////////////
@@ -276,16 +295,15 @@ function createCameras() {
     grassTextureCamera = createOrthogonalCamera(0, 0, 1215, 1);
     //let topViewCamera = createOrthogonalCamera(0, 200, 0, 1);
     //let isoCameraO = createOrthogonalCamera(50, 50, 50, 2);
-    let isoCameraP1 = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
+    stereoCamera = new THREE.StereoCamera();
+    stereoCamera.aspect = 0.5;
+    stereoCamera.eyeSep = 1;
+    perspectiveCamera = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
+    groundCamera = createPerspectiveCamera(0, 250, 0, new THREE.Vector3(0, 250, -10));
     //let isoCameraP2 = createPerspectiveCamera(0, 0, 1215, scene.position);
     //let isoCameraP2 = createPerspectiveCamera(1500, 0, 1215, new THREE.Vector3(1500, 0, 0));
 
-    cameras = [
-        { cam: isoCameraP1 },
-        //{ cam: isoCameraP2 },
-    ];
-
-    activeCamera = isoCameraP1;
+    activeCamera = perspectiveCamera;
 }
 
 function createOrthogonalCamera(x, y, z, zoom) {
@@ -314,24 +332,43 @@ function createPerspectiveCamera(x, y, z, lookat) {
     return camera;
 }
 
+//////////////////
+/* MOON LIGHTS  */
+//////////////////
+
+function createMoonLights() {
+    'use strict';
+    let ambientLight = new THREE.AmbientLight( 0xffd45f, 0.2 );
+
+    directionalLight = new THREE.DirectionalLight( 0xffd45f, 0.5 );
+    directionalLight.position.set( -200, 190, 50 );
+    
+    scene.add(ambientLight);
+    scene.add(directionalLight);
+
+    //const helper = new THREE.DirectionalLightHelper( directionalLight );
+    //scene.add( helper );
+}
+
 ////////////////////////
 /* CREATE OBJECT3D(S) */
 ////////////////////////
 
 function createField(x, y, z) {
     'use strict';
-    let geometry = new THREE.PlaneGeometry( 600, 600, 300, 300 );
+    let geometry = new THREE.PlaneGeometry( 750, 750, 300, 300 );
     const loader = new THREE.TextureLoader();
     const displacement = loader.load('js/heightmap.png');
     //displacement.wrapS = displacement.wrapT = THREE.MirroredRepeatWrapping;
     //displacement.repeat.set(2, 2);
-    grassMaterial = new THREE.MeshStandardMaterial({
-        displacementScale: 50,
-        displacementMap: displacement,
-        map: grassTexture.texture
-    });
+    grassMaterials = [
+        {mat: new THREE.MeshLambertMaterial({map: grassTexture.texture}) },
+        {mat: new THREE.MeshPhongMaterial({displacementScale: 50, displacementMap: displacement, map: grassTexture.texture}) },
+        {mat: new THREE.MeshToonMaterial({displacementScale: 50, displacementMap: displacement, map: grassTexture.texture}) },
+        {mat: new THREE.MeshBasicMaterial({map: grassTexture.texture}) },
+    ];
 
-    grassPlane = new THREE.Mesh( geometry, grassMaterial );
+    grassPlane = new THREE.Mesh( geometry, grassMaterials[1].mat );
     grassPlane.rotateX(-Math.PI / 2);
     grassPlane.position.set(x, y, z);
     scene.add( grassPlane );
@@ -339,59 +376,24 @@ function createField(x, y, z) {
 
 function createSkydome(x, y, z) {
     'use strict';
+    skyMaterials = [
+        {mat: new THREE.MeshLambertMaterial({map: skyTexture.texture, side: THREE.BackSide}) },
+        {mat: new THREE.MeshPhongMaterial({map: skyTexture.texture, side: THREE.BackSide}) },
+        {mat: new THREE.MeshToonMaterial({map: skyTexture.texture, side: THREE.BackSide})},
+        {mat: new THREE.MeshBasicMaterial({map: skyTexture.texture, side: THREE.BackSide})},
+    ];
     const geometry = new THREE.SphereGeometry( 525, 1120, 560 ); 
-    skyMaterial = new THREE.MeshBasicMaterial( {map: skyTexture.texture, side: THREE.BackSide} );
-
-    skydome = new THREE.Mesh( geometry, skyMaterial );
+    skydome = new THREE.Mesh( geometry, skyMaterials[1].mat );
     skydome.position.set(x, y, z);
     scene.add( skydome );
 }
 
 function createMoon(x, y, z) {
     'use strict;'
-    const geometry = new THREE.SphereGeometry( 50, 32, 32 );
-    moonMaterial = new THREE.MeshBasicMaterial( {color:  'moon yellow'} ); // 0xfefcd7 - glowing moon yellow
-    
-    lambertMaterial = new THREE.MeshLambertMaterial({
-        color: 'moon yellow', 
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
-    });
-    
-    phongMaterial = new THREE.MeshPhongMaterial({
-        color: 'moon yellow',
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
-    });
-    
-    toonMaterial = new THREE.MeshToonMaterial({
-        color: 'moon yellow',
-        emissive: 0xffff00,
-        emissiveIntensity: 1,
-    });
-    
-    moon = new THREE.Mesh(geometry, moonMaterial);
-    moon.position.set(x, y, z);
+    const geometry = new THREE.SphereGeometry(20);
+    moon = new THREE.Mesh(geometry, moonMaterials[1].mat);
+    moon.position.set(-200, 190, 50);
     scene.add(moon);
-}
-
-//////////////////
-/* MOON LIGHTS  */
-//////////////////
-
-function createMoonLights() {
-    ambientLight = new AmbientLight('moon yellow', 2);
-    
-    directionalLight = new DirectionalLight('moon yellow', 5);
-    directionalLight.position.set( 10, 10, 10 );
-    
-    scene.add(ambientLight);
-    scene.add(directionalLight);
-}
-
-function toggleMoonLight() {
-    isLightOn = !isLightOn;
-    directionalLight.visible = isLightOn;
 }
 
 function createOVNI(x, y, z) {
@@ -410,7 +412,7 @@ function createOVNI(x, y, z) {
 function addBody(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.SphereGeometry(50);
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[1].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[1].mat);
     mesh.scale.set(1, 0.35, 1);
     mesh.position.set(x, y, z);
     obj.add(mesh);
@@ -419,7 +421,7 @@ function addBody(obj, x, y, z) {
 function addCockpit(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.SphereGeometry(20);
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[0].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[0].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -439,7 +441,7 @@ function addPointLight(obj, rotation) {
     let light = new THREE.Object3D();
 
     let geometry = new THREE.SphereGeometry(2);
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[2].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[2].mat);
     mesh.position.set(30, 0, 0);
     light.add(mesh);
 
@@ -464,7 +466,7 @@ function addBottom(obj, x, y, z) {
 
     // add cylinder
     let geometry = new THREE.CylinderGeometry( 20, 20, 8, 40 ); 
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[1].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[1].mat);
     bottom.add(mesh);
 
     // add Spot Light
@@ -485,7 +487,6 @@ function createTrees() {
     addTree(0, 0, 0, 1, 0);
     addTree(-100, 0, 100, 1.5, Math.PI);
     addTree(0, 0, 200, 0.7, Math.PI/2);
-    addTree(0, 0, 0, 1, 0);
 }
 
 function addTree(x, y, z, scale, rotation) {
@@ -508,7 +509,7 @@ function addTree(x, y, z, scale, rotation) {
 function addTrunk(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry( 6, 6, 60); 
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[3].mat);
     mesh.position.set(x, y, z);
     obj.add(mesh);
 }
@@ -516,7 +517,7 @@ function addTrunk(obj, x, y, z) {
 function addSecondaryTrunk(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry( 3, 3, 40); 
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[3].mat);
     mesh.position.set(x, y, z);
     mesh.rotateZ(Math.PI/4);
     obj.add(mesh);
@@ -525,7 +526,7 @@ function addSecondaryTrunk(obj, x, y, z) {
 function addThirdTrunk(obj, x, y, z) {
     'use strict';
     let geometry = new THREE.CylinderGeometry( 2, 2, 20); 
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[3].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[3].mat);
     mesh.position.set(x, y, z);
     mesh.rotateX(Math.PI/4);
     obj.add(mesh);
@@ -534,9 +535,158 @@ function addThirdTrunk(obj, x, y, z) {
 function addLeaves(obj, x, y, z, raius) {
     'use strict';
     let geometry = new THREE.SphereGeometry(raius); 
-    let mesh = new THREE.Mesh(geometry, PhongMaterials[4].mat);
+    let mesh = new THREE.Mesh(geometry, phongMaterials[4].mat);
     mesh.position.set(x, y, z);
     mesh.scale.set(1, 0.5, 1);
+    obj.add(mesh);
+}
+
+function createHouse(x, y, z) {
+    'use strict';
+    house = new THREE.Object3D();
+    addWalls(house);
+    addAccessories(house);
+
+    house.position.set(x, y, z);
+    scene.add(house);
+} 
+
+function addWalls(obj) {
+    'use strict';
+    let geometry = new THREE.BufferGeometry();
+
+    let vertices = new Float32Array( [
+	    -50.0, 0.0,  0.0, // v0
+	     50.0, 0.0,  0.0, // v1
+	     50.0, 50.0, 0.0, // v2
+	    -50.0, 50.0, 0.0, // v3
+        -50.0, 0.0, -120.0, // v4
+	    50.0, 0.0, -120.0, // v5
+	    50.0, 50.0, -120.0, // v6
+	    -50.0,  50.0, -120.0, // v7
+        0.0, 70.0, 0.0, // v8
+        0.0, 70.0, -120.0, // v9
+        50.0, 50.0, -10.0, // v10
+        50.0, 50.0, -110.0, // v11
+        50.0, 0.0,  -10.0, // v12
+        50.0, 0.0, -110.0, // v13
+        50.0, 40.0,  -10.0, // v14
+        50.0, 40.0, -110.0, // v15
+        50.0, 25.0,  -10.0, // v16
+        50.0, 25.0,  -30.0, // v17
+        50.0, 0.0,  -30.0, // v18
+        50.0, 40.0,  -30.0, // v19
+        50.0, 40.0,  -45.0, // v20
+        50.0, 0.0,  -45.0, // v21
+        50.0, 40.0,  -75.0, // v22
+        50.0, 40.0,  -90.0, // v23
+        50.0, 0.0,  -75.0, // v24
+        50.0, 0.0,  -90.0, // v25
+        50.0, 25.0,  -90.0, // v26
+        50.0, 25.0,  -110.0, // v27
+    ] );
+
+    const indices = [
+	    0, 1, 2, // side near
+	    2, 3, 0, // side near
+        3, 2, 8, // side near (top)
+        4, 6, 5, // side far
+	    6, 4, 7, // side far
+        6, 7, 9, // side far (top)
+        4, 0, 3, // back
+        3, 7, 4, // back
+        1, 12, 2, // front (face 1)
+        12, 10, 2, // front (face 1)
+        16, 12, 18, // front (face 2)
+        18, 17, 16, // front (face 2)
+        18, 21, 19, // front (face 3)
+        19, 21, 20, // front (face 3)
+        22, 24, 25, // front (face 4)
+        22, 25, 23, // front (face 4)
+        26, 25, 13, // front (face 5)
+        26, 13, 27, // front (face 5)
+        5, 11, 13, // front (face 6)
+        5, 6, 11, // front (face 6)
+        10, 14, 15, // front (face 7)
+        10, 15, 11, // front (face 7)
+
+    ];
+
+    const colors = [];
+    const _color = new THREE.Color();
+    _color.setColorName('white');
+    for (let i=0; i < 28; i++) {
+        colors.push( _color.r, _color.g, _color.b );
+    }
+
+    geometry.setIndex( indices );
+    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh( geometry, houseMaterials[1].mat );
+
+    obj.add(mesh);
+}
+
+function addAccessories(obj) {
+    'use strict';
+    const geometry = new THREE.BufferGeometry();
+    
+    const vertices = new Float32Array( [
+	     50.0, 50.0, 0.0, // v0 roof
+	    -50.0, 50.0, 0.0, // v1 roof
+	    50.0, 50.0, -120.0, // v2 roof
+	    -50.0,  50.0, -120.0, // v3 roof
+        0.0, 70.0, 0.0, // v4 roof
+        0.0, 70.0, -120.0, // v5 roof
+        50.0, 0.0, -45.0, // v6 door
+        50.0, 0.0, -75.0, // v7 door
+        50.0, 40.0, -45.0, // v8 door
+        50.0, 40.0, -75.0, // v9 door
+        50.0, 25.0, -10.0, // v10 left window
+        50.0, 25.0, -30.0, // v11 left window
+        50.0, 40.0, -10.0, // v12 left window
+        50.0, 40.0, -30.0, // v13 left window
+        50.0, 25.0, -90.0, // v14 right window
+        50.0, 25.0, -110.0, // v15 right window
+        50.0, 40.0, -90.0, // v16 right window
+        50.0, 40.0, -110.0, // v17 right window
+    ] );
+
+    const indices = [
+	    0, 2, 5, // roof
+        5, 4, 0, // roof
+        3, 4, 5, // roof
+        1, 4, 3, // roof
+        7, 9, 8, // door
+        6, 7, 8, // door
+        11, 13, 12, // left window
+        10, 11, 12, // left window
+        15, 17, 16, // right window
+        14, 15, 16, // right window
+    ];
+
+    const colors = [];
+    const _color = new THREE.Color();
+    _color.setColorName('orangered');
+    for (let i=0; i < 6; i++) {
+        colors.push( _color.r, _color.g, _color.b );
+    }
+    _color.setColorName('saddlebrown');
+    for (let i=0; i < 4; i++) {
+        colors.push( _color.r, _color.g, _color.b );
+    }
+    _color.setColorName('lightblue');
+    for (let i=0; i < 8; i++) {
+        colors.push( _color.r, _color.g, _color.b );
+    }
+
+    geometry.setIndex( indices );
+    geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+    geometry.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh( geometry, houseMaterials[1].mat );
+
     obj.add(mesh);
 }
 
@@ -571,10 +721,19 @@ function handleOvniMovement(delta) {
 }
 
 function handleOvniRotation(delta) {
-    ovni.rotateY(delta * Math.PI/OVNI_SPEED);
+    'use strict';
+    ovni.rotateY(delta * Math.PI/OVNI_ROTATION);
 }
 
-function handleOvniLights() {
+function handleLights() {
+    'use strict';
+
+    if (keyDPressed && !keyDHeld) { //key D
+        // activate/deactivate directional light
+        keyDHeld = true;
+        directionalLight.visible = !directionalLight.visible;
+    }
+
     if (keyPPressed && !keyPHeld) { //key P
         // activate/deactivate point lights
         keyPHeld = true;
@@ -588,6 +747,77 @@ function handleOvniLights() {
         keySHeld = true;
         ovniLights[OVNI_N_LIGHTS].visible = !ovniLights[OVNI_N_LIGHTS].visible;
     }
+}
+
+function changeMaterials() {
+    'use strict';
+    if (keyQPressed) { // Lambert
+        skydome.material= skyMaterials[0].mat;
+        grassPlane.material= grassMaterials[0].mat;
+        moon.material= moonMaterials[0].mat;
+        changeHouseMaterial(0);
+        changeTreesMaterial(lambertMaterials);
+        changeOvniMaterial(lambertMaterials);
+    }
+    if (keyWPressed) { // Phong
+        skydome.material= skyMaterials[1].mat;
+        grassPlane.material= grassMaterials[1].mat;
+        moon.material= moonMaterials[1].mat;
+        changeHouseMaterial(1);
+        changeTreesMaterial(phongMaterials);
+        changeOvniMaterial(phongMaterials);
+    }
+    if (keyEPressed) { // Toon
+        skydome.material= skyMaterials[2].mat;
+        grassPlane.material= grassMaterials[2].mat;
+        moon.material= moonMaterials[2].mat;
+        changeHouseMaterial(2);
+        changeTreesMaterial(toonMaterials);
+        changeOvniMaterial(toonMaterials);
+
+    }
+    if (keyRPressed) { // Basic
+        skydome.material= skyMaterials[3].mat;
+        grassPlane.material= grassMaterials[3].mat;
+        moon.material= moonMaterials[3].mat;
+        changeHouseMaterial(3);
+        changeTreesMaterial(basicMaterials);
+        changeOvniMaterial(basicMaterials);
+
+    }
+}
+
+function changeHouseMaterial(pos) {
+    'use strict';
+    house.traverse( ( obj ) => {
+        if ( obj instanceof THREE.Mesh ) obj.material = houseMaterials[pos].mat;
+    } );
+}
+
+function changeTreesMaterial(materials) {
+    'use strict';
+    const colors = [3, 4, 3, 4, 3, 4];
+    for (let i=0; i < 3; i++) {
+        let j=0;
+        trees[i].traverse( ( obj ) => {
+            if ( obj instanceof THREE.Mesh ) {
+                obj.material = materials[colors[j]].mat;
+                j++;
+            }
+        } );
+    }
+}
+
+function changeOvniMaterial(materials) {
+    'use strict';
+    const colors = [1, 0, 2, 2, 2, 2, 2, 2, 1];
+    let j=0;
+    ovni.traverse( ( obj ) => {
+        if ( obj instanceof THREE.Mesh ) {
+            obj.material = materials[colors[j]].mat;
+            j++;
+        }
+    } );
 }
 
 function update(){
@@ -610,31 +840,34 @@ function update(){
     //    }
     //}
 
+    if (keyChangeNormalCameraPressed && !keyChangeNormalCameraHeld) { //key 1
+        keyChangeNormalCameraHeld = true;
+        //const button = document.getElementById("VRButton");
+        //button.click();
+        //button.onSessionEnded();
+        activeCamera = perspectiveCamera;
+    }
+
     if (key1Pressed && !key1Held) { //key 1
         key1Held = true;
         generateFlowerFieldTexture();
-        grassMaterial.map = grassTexture.texture;
+        for (let i=0; i<4; i++) {
+            grassMaterials[i].mat.map = grassTexture.texture;
+        }
     }
 
     if (key2Pressed && !key2Held) { //key 2
         key2Held = true;
         generateSkyboxTexture();
-        skyMaterial.map = skyTexture.texture;
-    }
-
-    handleOvniMovement(delta);
-    handleOvniRotation(delta);
-    handleOvniLights();
-
-    /*
-    if (key6Pressed && !key6Held) { //key 6
-        key6Held = true;
-        for (let i=0; i < 4; i++) {
-            materials[i].mat.wireframe = !materials[i].mat.wireframe;
+        for (let i=0; i<4; i++) {
+            skyMaterials[i].mat.map = skyTexture.texture;
         }
     }
-    
-    */
+
+    changeMaterials();
+    handleLights();
+    handleOvniMovement(delta);
+    handleOvniRotation(delta);
 }
 
 /////////////
@@ -642,7 +875,30 @@ function update(){
 /////////////
 function render() {
     'use strict';
-    renderer.render(scene, activeCamera);
+    if (renderer.xr.isPresenting) {
+        activeCamera = groundCamera;
+        
+        activeCamera.updateWorldMatrix();
+        stereoCamera.update(activeCamera);
+
+        let size = new THREE.Vector2();
+        renderer.getSize(size);
+
+        renderer.setScissorTest(true);
+
+        renderer.setScissor(0, 0, size.width / 2, size.height);
+        renderer.setViewport(0, 0, size.width / 2, size.height);
+        renderer.render(scene, stereoCamera.cameraL);
+
+        renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
+        renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
+        renderer.render(scene, stereoCamera.cameraR);
+
+        renderer.setScissorTest(false);
+    }
+    else {
+        renderer.render(scene, activeCamera);
+    }
 }
 
 ////////////////////////////////
@@ -657,18 +913,26 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // vr camera
+    button = VRButton.createButton( renderer );
+    document.body.appendChild( button );
+    renderer.xr.enabled = true;
+
+    renderer.setAnimationLoop( animate );
+
     createCameras();
     createTextureScene();
     createScene();
     createClock();
 
-    render();
-
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', onResize);
-}
 
+    //renderer.xr.addEventListener('sessionstart', hi);
+
+    //renderer.xr.addEventListener('sessionend', hi);
+}
 
 /////////////////////
 /* ANIMATION CYCLE */
@@ -678,7 +942,7 @@ function animate() {
     'use strict';
     update();
     render();
-    requestAnimationFrame(animate);
+    //requestAnimationFrame(animate);
 }
 
 ////////////////////////////
@@ -692,10 +956,11 @@ function onResize() {
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
-        for (let i = 0; i < 1; i++) {
-            cameras[i].cam.aspect = aspect;
-            cameras[i].cam.updateProjectionMatrix();
-        }
+        perspectiveCamera.aspect = aspect;
+        perspectiveCamera.updateProjectionMatrix();
+
+        groundCamera.aspect = aspect;
+        groundCamera.updateProjectionMatrix();
     }
 }
 
@@ -705,22 +970,23 @@ function onResize() {
 
 function onKeyDown(e) {
     'use strict';
-    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
-        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = true;
+    if (e.keyCode == 53) { //keys 1 to 5
+        keyChangeNormalCameraPressed = true;
     }
 
-    if (e.keyCode == 49) {
+    if (e.keyCode == 49) { //key 1
         key1Pressed = true;
     }
 
-    if (e.keyCode == 50) {
+    if (e.keyCode == 50) { // key 2
         key2Pressed = true;
     }
 
-    if (e.keyCode == 50) {
-        generateSkyboxTexture();
-        skyMaterial.map = skyTexture.texture;
+     // moon diretional light
+     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
+        keyDPressed = true;
     }
+
     // OVNI lights
     if (e.keyCode == 83) { //key S
         keySPressed = true;
@@ -743,88 +1009,23 @@ function onKeyDown(e) {
     if (e.keyCode == 40) { //key arrow down
         keyArrowDPressed = true;
     }
-    // change materials
+
+    // change materials to lambertMaterial
     if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
         keyQPressed = true;
     }
-
+    // change materials to phongMaterial
     if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
         keyWPressed = true;
     }
-
+    // change materials to toonMaterial
     if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
         keyEPressed = true;
     }
+    
     if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
         keyRPressed = true;
     }
-
-    // moon light on
-    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        toggleMoonLight();
-    }
-    // moon lambertMaterial
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        moon.moonMaterial = lambertMaterial;
-    }
-    // moon phongMaterial
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        moon.moonMaterial = phongMaterial;
-    }
-    // moon toonMaterial
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        moon.moonMaterial = toonMaterial;
-    }
-
-    /*
-    if (e.keyCode = 50) {
-        generateFlowerFieldTexture();
-    }
-    if (e.keyCode == 54) { //tecla 6
-        key6Pressed = true;
-    }
-    // head rotation
-    if (e.keyCode == 82 || e.keyCode == 114) { //key R/r
-        keyRHeld = true;
-    }
-    if (e.keyCode == 70 || e.keyCode == 102) { //key F/f
-        keyFHeld = true;
-    }
-    // arm translation
-    if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDHeld = true;
-    }
-    if (e.keyCode == 69 || e.keyCode == 101) { //key E/e
-        keyEHeld = true;
-    }
-    // feet rotation
-    if (e.keyCode == 81 || e.keyCode == 113) { //key Q/q
-        keyQHeld = true;
-    }
-    if (e.keyCode == 65 || e.keyCode == 97) { //key A/a
-        keyAHeld = true;
-    }
-    // leg rotation
-    if (e.keyCode == 87 || e.keyCode == 119) { //key W/w
-        keyWHeld = true;
-    }
-    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
-        keySHeld = true;
-    }
-    // trailer slide
-    if (e.keyCode == 37) { //key arrow left
-        keyArrowLHeld = true;
-    }
-    if (e.keyCode == 39) { //key arrow right
-        keyArrowRHeld = true;
-    }
-    if (e.keyCode == 38) { //key arrow up
-        keyArrowUHeld = true;
-    }
-    if (e.keyCode == 40) { //key arrow down
-        keyArrowDHeld = true;
-    }
-    */
 }
 
 ///////////////////////
@@ -833,22 +1034,24 @@ function onKeyDown(e) {
 
 function onKeyUp(e){
     'use strict';
-    if (CAMERA_INPUTS.includes(e.keyCode)) { //keys 1 to 5
-        keyCamerasPressed[e.keyCode - KEY_CODE_OFFSET] = false;
+    if (e.keyCode == 53) { //keys 1 to 5
+        keyChangeNormalCameraPressed = false;
+        keyChangeNormalCameraHeld = false;
     }
 
-    if (e.keyCode == 54) { //key 6
-        key6Pressed = false;
-        key6Held = false;
+    if (e.keyCode == 49) { //key 1
+        key1Pressed = false;
+        key1Held = false;
     }
-    if (e.keyCode == 50) { //key 6
+    if (e.keyCode == 50) { //key 2
         key2Pressed = false;
         key2Held = false;
     }
 
     // directional light
     if (e.keyCode == 68 || e.keyCode == 100) { //key D/d
-        keyDPressed = true;
+        keyDPressed = false;
+        keyDHeld = false;
     }
 
     // OVNI lights
@@ -891,4 +1094,44 @@ function onKeyUp(e){
         keyRPressed = false;
     }
 }
+
+
+/*
+let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
+function generateMoonTexture() {
+    // Create a different scene to hold our buffer objects
+    moonScene = new THREE.Scene();
+    // Create the texture that will store our result
+    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
+
+    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
+    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
+    moonScene.add(mesh);
+
+    renderer.setSize(1000, 1000);
+    renderer.setRenderTarget(moonTexture);
+    renderer.render(moonScene, moonTextureCamera);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setRenderTarget(null);
+
+    moonTexture.texture.repeat.set(1, 1);
+}
+
+initBackground
+_color.setColorName('moon yellow');
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+    moonColors.push( _color.r, _color.g, _color.b );
+*/
+
+/*
+function toggleMoonLight() {
+    isLightOn = !isLightOn;
+    directionalLight.visible = isLightOn;
+}
+*/
 
