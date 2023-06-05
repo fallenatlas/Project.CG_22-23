@@ -183,6 +183,7 @@ function initBackground() {
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
+    
     _color.setColorName('moon yellow');
     moonColors.push( _color.r, _color.g, _color.b );
     moonColors.push( _color.r, _color.g, _color.b );
