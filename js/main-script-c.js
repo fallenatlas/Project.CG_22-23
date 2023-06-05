@@ -14,6 +14,7 @@ const KEY_CODE_OFFSET = 49;
 
 const OVNI_SPEED = 32;
 const OVNI_N_LIGHTS = 6;
+const OVNI_ROTATION = 8;
 
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'white', wireframe: false }) },
@@ -56,6 +57,7 @@ const basicMaterials = [
 
 // initialize when creating skydome
 let skyMaterials = [];
+let grassMaterials = [];
 
 const moonMaterials = [
     {mat: new THREE.MeshLambertMaterial({ color: 0xffd45f, emissive: 0xffd45f, emissiveIntensity: 0.5 }) },
@@ -103,10 +105,10 @@ let keyRPressed = false;
 let effect, stereoCamera, groundCamera, perspectiveCamera, activeCamera;
 let scene, scene1, renderer, clock;
 let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
-let grassMaterial, grassPlane;
+
 
 // scene objects
-let skydome, moon, ovni, house;
+let skydome, moon, ovni, house, grassPlane;;
 let trees = [];
 
 // lights
@@ -149,7 +151,7 @@ function createScene() {
     //scene.background = new THREE.Color(color);
 
     createField(0,0,0);
-    createSkydome(0,0,0);
+    createSkydome(0,-250,0);
     createMoonLights();
     createMoon();
     createOVNI(0,150,0);
@@ -346,18 +348,19 @@ function createMoonLights() {
 
 function createField(x, y, z) {
     'use strict';
-    let geometry = new THREE.PlaneGeometry( 600, 600, 300, 300 );
+    let geometry = new THREE.PlaneGeometry( 750, 750, 300, 300 );
     const loader = new THREE.TextureLoader();
     const displacement = loader.load('js/heightmap.png');
     //displacement.wrapS = displacement.wrapT = THREE.MirroredRepeatWrapping;
     //displacement.repeat.set(2, 2);
-    grassMaterial = new THREE.MeshStandardMaterial({
-        displacementScale: 50,
-        displacementMap: displacement,
-        map: grassTexture.texture
-    });
+    grassMaterials = [
+        {mat: new THREE.MeshLambertMaterial({map: grassTexture.texture}) },
+        {mat: new THREE.MeshPhongMaterial({displacementScale: 50, displacementMap: displacement, map: grassTexture.texture}) },
+        {mat: new THREE.MeshToonMaterial({displacementScale: 50, displacementMap: displacement, map: grassTexture.texture}) },
+        {mat: new THREE.MeshBasicMaterial({map: grassTexture.texture}) },
+    ];
 
-    grassPlane = new THREE.Mesh( geometry, grassMaterial );
+    grassPlane = new THREE.Mesh( geometry, grassMaterials[1].mat );
     grassPlane.rotateX(-Math.PI / 2);
     grassPlane.position.set(x, y, z);
     scene.add( grassPlane );
@@ -711,7 +714,7 @@ function handleOvniMovement(delta) {
 
 function handleOvniRotation(delta) {
     'use strict';
-    ovni.rotateY(delta * Math.PI/OVNI_SPEED);
+    ovni.rotateY(delta * Math.PI/OVNI_ROTATION);
 }
 
 function handleLights() {
@@ -742,6 +745,7 @@ function changeMaterials() {
     'use strict';
     if (keyQPressed) { // Lambert
         skydome.material= skyMaterials[0].mat;
+        grassPlane.material= grassMaterials[0].mat;
         moon.material= moonMaterials[0].mat;
         changeHouseMaterial(0);
         changeTreesMaterial(lambertMaterials);
@@ -749,6 +753,7 @@ function changeMaterials() {
     }
     if (keyWPressed) { // Phong
         skydome.material= skyMaterials[1].mat;
+        grassPlane.material= grassMaterials[1].mat;
         moon.material= moonMaterials[1].mat;
         changeHouseMaterial(1);
         changeTreesMaterial(phongMaterials);
@@ -756,6 +761,7 @@ function changeMaterials() {
     }
     if (keyEPressed) { // Toon
         skydome.material= skyMaterials[2].mat;
+        grassPlane.material= grassMaterials[2].mat;
         moon.material= moonMaterials[2].mat;
         changeHouseMaterial(2);
         changeTreesMaterial(toonMaterials);
@@ -764,6 +770,7 @@ function changeMaterials() {
     }
     if (keyRPressed) { // Basic
         skydome.material= skyMaterials[3].mat;
+        grassPlane.material= grassMaterials[3].mat;
         moon.material= moonMaterials[3].mat;
         changeHouseMaterial(3);
         changeTreesMaterial(basicMaterials);
@@ -836,7 +843,9 @@ function update(){
     if (key1Pressed && !key1Held) { //key 1
         key1Held = true;
         generateFlowerFieldTexture();
-        grassMaterial.map = grassTexture.texture;
+        for (let i=0; i<4; i++) {
+            grassMaterials[i].mat.map = grassTexture.texture;
+        }
     }
 
     if (key2Pressed && !key2Held) { //key 2
@@ -907,8 +916,6 @@ function init() {
     createTextureScene();
     createScene();
     createClock();
-
-    render();
 
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
