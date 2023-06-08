@@ -5,6 +5,7 @@ const OVNI_SPEED = 32;
 const OVNI_N_LIGHTS = 6;
 const OVNI_ROTATION = 8;
 
+// Stars and flowers materials
 const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'white', wireframe: false }) },
     { mat:  new THREE.MeshBasicMaterial({ color: 'yellow', wireframe: false }) },
@@ -12,6 +13,7 @@ const materials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'skyblue', wireframe: false }) },
 ]
 
+// Ovni and trees materials
 const lambertMaterials = [
     { mat:  new THREE.MeshLambertMaterial({ color: 'lightblue', wireframe: false }) }, //cockpit
     { mat:  new THREE.MeshLambertMaterial({ color: 'grey', wireframe: false }) }, // ovni
@@ -44,7 +46,7 @@ const basicMaterials = [
     { mat:  new THREE.MeshBasicMaterial({ color: 'darkgreen', wireframe: false }) }, // tree
 ];
 
-// initialize when creating skydome
+// initialize when creating skydome and grass plane
 let skyMaterials = [];
 let grassMaterials = [];
 
@@ -177,13 +179,10 @@ function initBackground() {
     const _color = new THREE.Color();
     _color.setColorName('blueviolet');
     skyColors.push( _color.r, _color.g, _color.b );
-    _color.setColorName('blueviolet');
     skyColors.push( _color.r, _color.g, _color.b );
     _color.setColorName('darkblue');
     skyColors.push( _color.r, _color.g, _color.b );
-    _color.setColorName('darkblue');
     skyColors.push( _color.r, _color.g, _color.b );
-    _color.setColorName('darkblue');
     skyColors.push( _color.r, _color.g, _color.b );
     _color.setColorName('blueviolet');
     skyColors.push( _color.r, _color.g, _color.b );
@@ -487,7 +486,7 @@ function addLeaves(obj, x, y, z, raius) {
     let geometry = new THREE.SphereGeometry(raius); 
     let mesh = new THREE.Mesh(geometry, phongMaterials[4].mat);
     mesh.position.set(x, y, z);
-    mesh.scale.set(1, 0.5, 1);
+    mesh.scale.set(1, 0.5, 0.9);
     obj.add(mesh);
 }
 
@@ -687,7 +686,7 @@ function handleLights() {
     if (keyPPressed && !keyPHeld) { //key P
         // activate/deactivate point lights
         keyPHeld = true;
-        for (let i=0; i<=OVNI_N_LIGHTS-1; i++) {
+        for (let i=0; i<OVNI_N_LIGHTS; i++) {
             ovniLights[i].visible = !ovniLights[i].visible;
         }
     }
@@ -878,11 +877,11 @@ function onKeyDown(e) {
     }
 
     // OVNI lights
-    if (e.keyCode == 83) { //key S
+    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
         keySPressed = true;
     }
 
-    if (e.keyCode == 80) { //key P
+    if (e.keyCode == 80 || e.keyCode == 112) { //key P
         keyPPressed = true;
     }
 
@@ -940,12 +939,12 @@ function onKeyUp(e){
     }
 
     // OVNI lights
-    if (e.keyCode == 83) { //key S
+    if (e.keyCode == 83 || e.keyCode == 115) { //key S/s
         keySPressed = false;
         keySHeld = false;
     }
 
-    if (e.keyCode == 80) { //key P
+    if (e.keyCode == 80 || e.keyCode == 112) { //key P/p
         keyPPressed = false;
         keyPHeld = false;
     }
