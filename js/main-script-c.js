@@ -1,17 +1,6 @@
 //////////////////////
 /* GLOBAL VARIABLES */
 //////////////////////
-
-// render to frame buffer
-// heightmap
-// fazer load da texture
-// definir texture map
-
-const FRUSTUM_SIZE = 600;
-
-const CAMERA_INPUTS = [49, 50];
-const KEY_CODE_OFFSET = 49;
-
 const OVNI_SPEED = 32;
 const OVNI_N_LIGHTS = 6;
 const OVNI_ROTATION = 8;
@@ -73,9 +62,6 @@ const houseMaterials = [
     {mat: new THREE.MeshBasicMaterial( { vertexColors: true } )},
 ];
 
-// cameras
-let keyChangeNormalCameraPressed = false;
-let keyChangeNormalCameraHeld = false;
 // generate grass
 let key1Pressed = false;
 let key1Held = false;
@@ -102,10 +88,9 @@ let keyEPressed = false;
 let keyQPressed = false;
 let keyRPressed = false;
 
-let effect, stereoCamera, groundCamera, perspectiveCamera, activeCamera;
-let scene, scene1, renderer, clock;
+let effect, perspectiveCamera, activeCamera;
+let scene, renderer, clock;
 let skyScene, grassScene, skyTexture, grassTexture, skyTextureCamera, grassTextureCamera;
-
 
 // scene objects
 let skydome, moon, ovni, house, grassPlane;;
@@ -115,11 +100,8 @@ let trees = [];
 let directionalLight;
 let ovniLights = [];
 
-let button;
-
 const skyColors = [];
 const grassColors = [];
-//const moonColors = [];
 const vertices = new Float32Array( [
     -500.0, -500.0,  500.0, // v0
     500.0, -500.0,  500.0, // v1
@@ -129,7 +111,6 @@ const vertices = new Float32Array( [
     -500.0,  500.0,  500.0, // v4
     -500.0, -500.0,  500.0  // v5
 ] );
-let setBackground = false;
 let backgroundGeometry1, backgroundGeometry2, backgroundMaterial;
 
 
@@ -146,9 +127,6 @@ function createTextureScene(){
 function createScene() {
     'use strict';
     scene = new THREE.Scene();
-
-    //const color = 'lightblue';
-    //scene.background = new THREE.Color(color);
 
     createField(0,0,0);
     createSkydome(0,-250,0);
@@ -217,15 +195,7 @@ function initBackground() {
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
     grassColors.push( _color.r, _color.g, _color.b );
-    
-    _color.setColorName('moon yellow');
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    
+
     backgroundMaterial = new THREE.MeshBasicMaterial( { side: THREE.DoubleSide, vertexColors: true } );
 }
 
@@ -293,15 +263,7 @@ function createCameras() {
     'use strict';
     skyTextureCamera = createOrthogonalCamera(0, 0, 1215, 1);
     grassTextureCamera = createOrthogonalCamera(0, 0, 1215, 1);
-    //let topViewCamera = createOrthogonalCamera(0, 200, 0, 1);
-    //let isoCameraO = createOrthogonalCamera(50, 50, 50, 2);
-    stereoCamera = new THREE.StereoCamera();
-    stereoCamera.aspect = 0.5;
-    stereoCamera.eyeSep = 1;
     perspectiveCamera = createPerspectiveCamera(250, 100, 250, new THREE.Vector3(0, 0, 0));
-    groundCamera = createPerspectiveCamera(0, 250, 0, new THREE.Vector3(0, 250, -10));
-    //let isoCameraP2 = createPerspectiveCamera(0, 0, 1215, scene.position);
-    //let isoCameraP2 = createPerspectiveCamera(1500, 0, 1215, new THREE.Vector3(1500, 0, 0));
 
     activeCamera = perspectiveCamera;
 }
@@ -345,9 +307,6 @@ function createMoonLights() {
     
     scene.add(ambientLight);
     scene.add(directionalLight);
-
-    //const helper = new THREE.DirectionalLightHelper( directionalLight );
-    //scene.add( helper );
 }
 
 ////////////////////////
@@ -358,9 +317,8 @@ function createField(x, y, z) {
     'use strict';
     let geometry = new THREE.PlaneGeometry( 750, 750, 300, 300 );
     const loader = new THREE.TextureLoader();
-    const displacement = loader.load('js/heightmap.png');
-    //displacement.wrapS = displacement.wrapT = THREE.MirroredRepeatWrapping;
-    //displacement.repeat.set(2, 2);
+    const displacement = loader.load('heightmap.png');
+
     grassMaterials = [
         {mat: new THREE.MeshLambertMaterial({map: grassTexture.texture}) },
         {mat: new THREE.MeshPhongMaterial({displacementScale: 50, displacementMap: displacement, map: grassTexture.texture}) },
@@ -454,10 +412,6 @@ function addPointLight(obj, rotation) {
     light.position.set(0, -14, 0);
     light.rotateY(rotation);
     obj.add(light);
-    
-
-    //const helper = new THREE.PointLightHelper(pointlight, 1);
-    //scene.add(helper);
 }
 
 function addBottom(obj, x, y, z) {
@@ -476,10 +430,6 @@ function addBottom(obj, x, y, z) {
 
     bottom.position.set(x, y, z);
     obj.add(bottom);
-
-    //const helper = new THREE.SpotLightHelper(spotLight);
-    //scene.add(helper);
-
 }
 
 function createTrees() {
@@ -824,30 +774,6 @@ function update(){
     'use strict';
     let delta = clock.getDelta();
 
-    //for(let i=0; i<2; i++) {
-    //    if (keyCamerasPressed[i]) {
-            /*
-            if (i == 0) {
-                activeCamera = skyTextureCamera;
-                renderer.setSize(1000, 1000);
-            }
-            if (i == 1) {
-                activeCamera = cameras[0].cam;
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            }
-            */
-            //activeCamera = cameras[i].cam;
-    //    }
-    //}
-
-    if (keyChangeNormalCameraPressed && !keyChangeNormalCameraHeld) { //key 1
-        keyChangeNormalCameraHeld = true;
-        //const button = document.getElementById("VRButton");
-        //button.click();
-        //button.onSessionEnded();
-        activeCamera = perspectiveCamera;
-    }
-
     if (key1Pressed && !key1Held) { //key 1
         key1Held = true;
         generateFlowerFieldTexture();
@@ -875,30 +801,7 @@ function update(){
 /////////////
 function render() {
     'use strict';
-    if (renderer.xr.isPresenting) {
-        activeCamera = groundCamera;
-        
-        activeCamera.updateWorldMatrix();
-        stereoCamera.update(activeCamera);
-
-        let size = new THREE.Vector2();
-        renderer.getSize(size);
-
-        renderer.setScissorTest(true);
-
-        renderer.setScissor(0, 0, size.width / 2, size.height);
-        renderer.setViewport(0, 0, size.width / 2, size.height);
-        renderer.render(scene, stereoCamera.cameraL);
-
-        renderer.setScissor(size.width / 2, 0, size.width / 2, size.height);
-        renderer.setViewport(size.width / 2, 0, size.width / 2, size.height);
-        renderer.render(scene, stereoCamera.cameraR);
-
-        renderer.setScissorTest(false);
-    }
-    else {
-        renderer.render(scene, activeCamera);
-    }
+    renderer.render(scene, activeCamera);
 }
 
 ////////////////////////////////
@@ -910,15 +813,13 @@ function init() {
     renderer = new THREE.WebGLRenderer({
         antialias: true
     });
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
     // vr camera
-    button = VRButton.createButton( renderer );
-    document.body.appendChild( button );
+    document.body.appendChild( VRButton.createButton( renderer ) );
     renderer.xr.enabled = true;
-
-    renderer.setAnimationLoop( animate );
 
     createCameras();
     createTextureScene();
@@ -928,10 +829,6 @@ function init() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('resize', onResize);
-
-    //renderer.xr.addEventListener('sessionstart', hi);
-
-    //renderer.xr.addEventListener('sessionend', hi);
 }
 
 /////////////////////
@@ -942,7 +839,7 @@ function animate() {
     'use strict';
     update();
     render();
-    //requestAnimationFrame(animate);
+    renderer.setAnimationLoop( animate );
 }
 
 ////////////////////////////
@@ -953,14 +850,12 @@ function onResize() {
     'use strict';
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // set pixel ratio?
 
     if (window.innerHeight > 0 && window.innerWidth > 0) {
         const aspect = window.innerWidth / window.innerHeight;
         perspectiveCamera.aspect = aspect;
         perspectiveCamera.updateProjectionMatrix();
-
-        groundCamera.aspect = aspect;
-        groundCamera.updateProjectionMatrix();
     }
 }
 
@@ -970,10 +865,6 @@ function onResize() {
 
 function onKeyDown(e) {
     'use strict';
-    if (e.keyCode == 53) { //keys 1 to 5
-        keyChangeNormalCameraPressed = true;
-    }
-
     if (e.keyCode == 49) { //key 1
         key1Pressed = true;
     }
@@ -1034,11 +925,6 @@ function onKeyDown(e) {
 
 function onKeyUp(e){
     'use strict';
-    if (e.keyCode == 53) { //keys 1 to 5
-        keyChangeNormalCameraPressed = false;
-        keyChangeNormalCameraHeld = false;
-    }
-
     if (e.keyCode == 49) { //key 1
         key1Pressed = false;
         key1Held = false;
@@ -1094,44 +980,3 @@ function onKeyUp(e){
         keyRPressed = false;
     }
 }
-
-
-/*
-let skyScene, grassScene, moonScene, skyTexture, grassTexture, moonTexture, skyTextureCamera, grassTextureCamera, moonTextureCamera;
-function generateMoonTexture() {
-    // Create a different scene to hold our buffer objects
-    moonScene = new THREE.Scene();
-    // Create the texture that will store our result
-    moonTexture = new THREE.WebGLRenderTarget( 1000, 1000, { minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, wrapS: THREE.MirroredRepeatWrapping, wrapT: THREE.MirroredRepeatWrapping});
-
-    backgroundGeometry2.setAttribute( 'color', new THREE.Float32BufferAttribute( moonColors, 3 ) );
-    backgroundGeometry2.setAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-    let mesh = new THREE.Mesh( backgroundGeometry2, backgroundMaterial );
-    moonScene.add(mesh);
-
-    renderer.setSize(1000, 1000);
-    renderer.setRenderTarget(moonTexture);
-    renderer.render(moonScene, moonTextureCamera);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setRenderTarget(null);
-
-    moonTexture.texture.repeat.set(1, 1);
-}
-
-initBackground
-_color.setColorName('moon yellow');
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-    moonColors.push( _color.r, _color.g, _color.b );
-*/
-
-/*
-function toggleMoonLight() {
-    isLightOn = !isLightOn;
-    directionalLight.visible = isLightOn;
-}
-*/
-
